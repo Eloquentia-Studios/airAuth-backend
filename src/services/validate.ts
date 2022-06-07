@@ -8,7 +8,7 @@ import validator from 'validator'
  */
 export const isValidUsername = (username: string): boolean => {
   return (
-    typeof username === 'string' &&
+    isString(username) &&
     validator.isLength(username, { min: 3, max: 40 }) &&
     validator.isAlphanumeric(username)
   )
@@ -21,7 +21,7 @@ export const isValidUsername = (username: string): boolean => {
  * @returns True if the value is a valid email.
  */
 export const isValidEmail = (email: string): boolean => {
-  return typeof email === 'string' && validator.isEmail(email)
+  return isString(email) && validator.isEmail(email)
 }
 
 /**
@@ -31,7 +31,7 @@ export const isValidEmail = (email: string): boolean => {
  * @returns True if the value is a valid phone number.
  */
 export const isValidPhoneNumber = (phonenumber: string): boolean => {
-  return typeof phonenumber === 'string' && validator.isMobilePhone(phonenumber)
+  return isString(phonenumber) && validator.isMobilePhone(phonenumber)
 }
 
 /**
@@ -42,7 +42,7 @@ export const isValidPhoneNumber = (phonenumber: string): boolean => {
  */
 export const isValidPassword = (password: string): boolean => {
   return (
-    typeof password === 'string' &&
+    isString(password) &&
     validator.isStrongPassword(password, {
       minLength: 10,
       minLowercase: 1,
@@ -51,4 +51,14 @@ export const isValidPassword = (password: string): boolean => {
       minSymbols: 1
     })
   )
+}
+
+/**
+ * Checks if the given value is a string.
+ *
+ * @param value Value to check.
+ * @returns True if the value is a string.
+ */
+export const isString = (value: string): boolean => {
+  return typeof value === 'string'
 }

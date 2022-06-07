@@ -1,6 +1,7 @@
 import { Router } from 'express'
-import { createUser, getUser } from '../services/users.js'
+import { createUser, getUser, validateUser } from '../services/users.js'
 import {
+  isString,
   isValidEmail,
   isValidPassword,
   isValidPhoneNumber,
@@ -57,6 +58,36 @@ usersRouter.post('/', async (req, res) => {
     const user = createUser(username, email, password, phonenumber)
 
     res.status(200).json({ message: 'Success!' })
+  } catch (error) {
+    res
+      .status(500)
+      .json({ code: 500, errors: ['Internal server error occured'] })
+    console.error(error)
+  }
+})
+
+// Handle POST /api/v1/user/login requests to login a user.
+usersRouter.post('/login', async (req, res) => {
+  try {
+    // Fetch the user information from the request body.
+    const { identifier, password } = req.body
+
+    const errors = []
+
+    if (isString(identifier)) errors.push('Identifier must be a string')
+
+    if (isString(password)) errors.push('Password must be a string')
+
+    if (errors.length > 0) return res.status(400).json({ code: 400, errors })
+
+    // Validate the user.
+    const user = await validateUser(identifier, password)
+
+    // Respond with 401 if the user is not valid.
+    if (!user)
+      return res.status(401).json({ code: 401, errors: ['Invalid user'] })
+
+    // Create a JWT token for the user.
   } catch (error) {
     res
       .status(500)

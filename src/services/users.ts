@@ -1,5 +1,5 @@
 import type { User } from '@prisma/client'
-import { hashPassword } from './password.js'
+import { hashPassword, verifyPassword } from './password.js'
 import prisma from './prisma.js'
 
 /**
@@ -46,5 +46,31 @@ export const getUser = async (identifier: string): Promise<User | null> => {
       ]
     }
   })
+  return user
+}
+
+/**
+ * Check if an identifier corresponds to a user with a given password.
+ *
+ * @param identifier Username, email or phonenumber to check.
+ * @param password Password to check.
+ * @returns The user if the credentials are valid, null otherwise.
+ */
+export const validateUser = async (
+  identifier: string,
+  password: string
+): Promise<User | null> => {
+  // Get the user.
+  const user = await getUser(identifier)
+
+  // Check if the user exists.
+  if (!user) return null
+
+  // Check if the password is correct.
+  const passwordCorrect = await verifyPassword(password, user.passwordHash)
+
+  // Return null if the password is incorrect, otherwise return the user.
+  if (!passwordCorrect) return null
+
   return user
 }
