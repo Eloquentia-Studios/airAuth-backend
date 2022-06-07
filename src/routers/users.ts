@@ -1,9 +1,26 @@
 import { Router } from 'express'
+import { isValidUsername } from '../services/validate.js'
 
 const usersRouter = Router()
 
+// Handle POST /api/v1/user requests to create a new user.
 usersRouter.post('/', (req, res) => {
-  res.send('Create a new user')
+  // Fetch the user information from the request body.
+  const { username, email, phonenumber, password } = req.body
+
+  // Validate the user information.
+  const errors = []
+  if (!isValidUsername(username)) {
+    errors.push(
+      'Invalid username, must be between 3 and 40 characters and alphanumeric.'
+    )
+  }
+
+  // Respond with 400 if the user information is invalid.
+  if (errors.length > 0) return res.status(400).json({ code: 400, errors })
+
+  console.log(username, email, phonenumber, password)
+  res.status(200).json({ message: 'Success!' })
 })
 
 export default usersRouter
