@@ -1,6 +1,7 @@
 lockfileVersion: 5.4
 
 specifiers:
+  '@prisma/client': ^3.15.0
   '@types/express': ^4.17.13
   '@types/node': ^17.0.40
   argon2: ^0.28.5
@@ -13,6 +14,7 @@ specifiers:
   typescript: ^4.7.3
 
 dependencies:
+  '@prisma/client': 3.15.0_prisma@3.15.0
   argon2: 0.28.5
   dotenv: 16.0.1
   express: 4.18.1
@@ -74,10 +76,27 @@ packages:
     engines: {node: '>=10'}
     dev: false
 
+  /@prisma/client/3.15.0_prisma@3.15.0:
+    resolution: {integrity: sha512-0bwpIXtE3qkkm8JV6kSHLPyEbEUQD+hFAO7NM5INr23vFBOoyKwKI1Q4V08A7jq3NdI7g2NlBuugCHE9//1ANw==}
+    engines: {node: '>=12.6'}
+    requiresBuild: true
+    peerDependencies:
+      prisma: '*'
+    peerDependenciesMeta:
+      prisma:
+        optional: true
+    dependencies:
+      '@prisma/engines-version': 3.15.0-29.b9297dc3a59307060c1c39d7e4f5765066f38372
+      prisma: 3.15.0
+    dev: false
+
+  /@prisma/engines-version/3.15.0-29.b9297dc3a59307060c1c39d7e4f5765066f38372:
+    resolution: {integrity: sha512-VRj1Svti6h4UnUxEbIpio+40zppFztGKogVbkgblndbEQfmNdLh2M5bzDD6kaO+r8LBxHUBzUG/zEmlpxTvwoA==}
+    dev: false
+
   /@prisma/engines/3.15.0-29.b9297dc3a59307060c1c39d7e4f5765066f38372:
     resolution: {integrity: sha512-S5T0NuVF2+NoKoxY5bN6O/7avv4ifcjqqk5+JFZ6C4g+P7JMM3nY0wGBPI+46A8yGIDsyyFmvFTYiIDsEUwUeQ==}
     requiresBuild: true
-    dev: true
 
   /@sindresorhus/is/0.14.0:
     resolution: {integrity: sha512-9NET910DNaIPngYnLLPeg+Ogzqsi9uM4mSboU5y6p8S5DzMTVEsJZrawi+BoDNUVBa2DhJqQYUFvMDfgU062LQ==}
@@ -1254,7 +1273,6 @@ packages:
     requiresBuild: true
     dependencies:
       '@prisma/engines': 3.15.0-29.b9297dc3a59307060c1c39d7e4f5765066f38372
-    dev: true
 
   /proxy-addr/2.0.7:
     resolution: {integrity: sha512-llQsMLSUDUPT44jdrU/O37qlnifitDP+ZwrmmZcoSKyLKvtZxpyV0n2/bD/N4tBAAZ/gJEdZU7KMraoK1+XYAg==}
