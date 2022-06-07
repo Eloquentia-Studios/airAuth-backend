@@ -7,6 +7,6 @@ if test -f "$PRIVATE_KEY" && test -f "$PUBLIC_KEY"; then
 else
   echo "Generating private and public key"
   mkdir -p ./config/pems/
-  openssl genrsa -out $PRIVATE_KEY 2048
-  openssl rsa -in $PRIVATE_KEY -pubout -out $PUBLIC_KEY
+  openssl ecparam -genkey -name secp521r1 -noout -out $PRIVATE_KEY
+  openssl ec -in $PRIVATE_KEY -pubout -out $PUBLIC_KEY
 fi
