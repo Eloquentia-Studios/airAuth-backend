@@ -1,5 +1,6 @@
 import express from 'express'
 import usersRouter from '../routers/users.js'
+import otpRouter from '../routers/otp.js'
 import type { Express } from 'express'
 
 /**
@@ -33,6 +34,7 @@ const setupGlobalMiddleware = (app: Express): void => {
 const setupRoutes = (app: Express): void => {
   // Setup the users router.
   app.use('/api/v1/user', usersRouter)
+  app.use('/api/v1/otp', otpRouter)
 
   // Respond with 404 for all non-existing routes.
   app.get('*', (req, res) => {
