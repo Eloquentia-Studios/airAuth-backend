@@ -23,3 +23,13 @@ export const isValidUsername = (username: string): boolean => {
 export const isValidEmail = (email: string): boolean => {
   return typeof email === 'string' && validator.isEmail(email)
 }
+
+/**
+ * Checks if the given value is a valid phone number.
+ *
+ * @param phonenumber Value to validate.
+ * @returns True if the value is a valid phone number.
+ */
+export const isValidPhoneNumber = (phonenumber: string): boolean => {
+  return typeof phonenumber === 'string' && validator.isMobilePhone(phonenumber)
+}

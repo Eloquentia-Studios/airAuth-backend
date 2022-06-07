@@ -1,5 +1,9 @@
 import { Router } from 'express'
-import { isValidEmail, isValidUsername } from '../services/validate.js'
+import {
+  isValidEmail,
+  isValidPhoneNumber,
+  isValidUsername
+} from '../services/validate.js'
 
 const usersRouter = Router()
 
@@ -18,6 +22,10 @@ usersRouter.post('/', (req, res) => {
 
   if (!isValidEmail(email)) {
     errors.push('Invalid email.')
+  }
+
+  if (phonenumber && !isValidPhoneNumber(phonenumber)) {
+    errors.push('Invalid phone number.')
   }
 
   // Respond with 400 if the user information is invalid.
