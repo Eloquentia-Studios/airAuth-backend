@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { createUser, getUser, validateUser } from '../services/users.js'
+import { generateToken } from '../services/jwt.js'
 import {
   isString,
   isValidEmail,
@@ -74,9 +75,9 @@ usersRouter.post('/login', async (req, res) => {
 
     const errors = []
 
-    if (isString(identifier)) errors.push('Identifier must be a string')
+    if (!isString(identifier)) errors.push('Identifier must be a string')
 
-    if (isString(password)) errors.push('Password must be a string')
+    if (!isString(password)) errors.push('Password must be a string')
 
     if (errors.length > 0) return res.status(400).json({ code: 400, errors })
 
@@ -88,6 +89,9 @@ usersRouter.post('/login', async (req, res) => {
       return res.status(401).json({ code: 401, errors: ['Invalid user'] })
 
     // Create a JWT token for the user.
+    const token = generateToken(user)
+
+    res.status(200).json({ token })
   } catch (error) {
     res
       .status(500)
