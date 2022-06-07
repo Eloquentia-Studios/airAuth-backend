@@ -62,3 +62,43 @@ export const isValidPassword = (password: string): boolean => {
 export const isString = (value: string): boolean => {
   return typeof value === 'string'
 }
+
+/**
+ * Checks if the given value is a valid OTP URL.
+ *
+ * @param url Value to validate.
+ * @returns True if the value is a valid OTP URL.
+ */
+export const isValidOtpUrl = (url: string): boolean => {
+  // Check that it is string
+  if (!isString(url)) return false
+
+  // Check structure of the URL.
+  if (!url.match(/^otpauth:\/\/(totp)(\/(([^:?]+)(:([^:?]*))?))?\?(.+)$/gi))
+    return false
+
+  // Check that it has a secret.
+  if (!url.match(/secret=([^&]+)&/gi)) return false
+
+  // Check all the other parameters.
+  const otp = new URL(url)
+  const allowedParams = ['secret', 'issuer', 'algorithm', 'digits', 'period']
+  for (const param of otp.searchParams.keys()) {
+    if (!allowedParams.includes(param)) return false
+  }
+
+  // Check that the algorithm is valid.
+  const algorithm = otp.searchParams.get('algorithm')
+  if (algorithm && !['SHA1', 'SHA256', 'SHA512'].includes(algorithm))
+    return false
+
+  // Check that the digits is valid.
+  const digits = otp.searchParams.get('digits')
+  if (digits && !['6', '8'].includes(digits)) return false
+
+  // Check that the period is valid.
+  const period = otp.searchParams.get('period')
+  if (period && !['30', '60', '90'].includes(period)) return false
+
+  return true
+}
