@@ -2,6 +2,7 @@
   "name": "airAuth-backend",
   "version": "1.0.0",
   "description": "",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "watch": "tsc --watch",
@@ -16,6 +17,7 @@
   ],
   "license": "ISC",
   "devDependencies": {
+    "@types/express": "^4.17.13",
     "@types/node": "^17.0.40",
     "nodemon": "^2.0.16",
     "ts-node": "^10.8.1",
