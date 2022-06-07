@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import {
   isValidEmail,
+  isValidPassword,
   isValidPhoneNumber,
   isValidUsername
 } from '../services/validate.js'
@@ -26,6 +27,12 @@ usersRouter.post('/', (req, res) => {
 
   if (phonenumber && !isValidPhoneNumber(phonenumber)) {
     errors.push('Invalid phone number.')
+  }
+
+  if (!isValidPassword(password)) {
+    errors.push(
+      'Invalid password, must be at least 10 characters long and be a mix of lowercase, uppercase, numbers and special characters.'
+    )
   }
 
   // Respond with 400 if the user information is invalid.

@@ -33,3 +33,22 @@ export const isValidEmail = (email: string): boolean => {
 export const isValidPhoneNumber = (phonenumber: string): boolean => {
   return typeof phonenumber === 'string' && validator.isMobilePhone(phonenumber)
 }
+
+/**
+ * Checks if the given value is a valid password.
+ *
+ * @param password Value to validate.
+ * @returns True if the value is a valid password.
+ */
+export const isValidPassword = (password: string): boolean => {
+  return (
+    typeof password === 'string' &&
+    validator.isStrongPassword(password, {
+      minLength: 10,
+      minLowercase: 1,
+      minUppercase: 1,
+      minNumbers: 1,
+      minSymbols: 1
+    })
+  )
+}
