@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { isValidUsername } from '../services/validate.js'
+import { isValidEmail, isValidUsername } from '../services/validate.js'
 
 const usersRouter = Router()
 
@@ -14,6 +14,10 @@ usersRouter.post('/', (req, res) => {
     errors.push(
       'Invalid username, must be between 3 and 40 characters and alphanumeric.'
     )
+  }
+
+  if (!isValidEmail(email)) {
+    errors.push('Invalid email.')
   }
 
   // Respond with 400 if the user information is invalid.

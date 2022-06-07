@@ -13,3 +13,13 @@ export const isValidUsername = (username: string): boolean => {
     validator.isAlphanumeric(username)
   )
 }
+
+/**
+ * Checks if the given value is a valid email.
+ *
+ * @param email Value to validate.
+ * @returns True if the value is a valid email.
+ */
+export const isValidEmail = (email: string): boolean => {
+  return typeof email === 'string' && validator.isEmail(email)
+}
