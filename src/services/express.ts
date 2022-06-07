@@ -1,5 +1,4 @@
 import express from 'express'
-import usersRouter from '../routers/users.js'
 import type { Express } from 'express'
 
 /**
@@ -31,9 +30,6 @@ const setupGlobalMiddleware = (app: Express): void => {
  * @param app Express instance.
  */
 const setupRoutes = (app: Express): void => {
-  // Setup the users router.
-  app.use('/api/v1/user', usersRouter)
-
   // Respond with 404 for all non-existing routes.
   app.get('*', (req, res) => {
     res.status(404).json({ code: 404, errors: ['Not found'] })
