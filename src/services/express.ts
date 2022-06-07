@@ -29,4 +29,9 @@ const setupGlobalMiddleware = (app: Express): void => {
  *
  * @param app Express instance.
  */
-const setupRoutes = (app: Express): void => {}
+const setupRoutes = (app: Express): void => {
+  // Respond with 404 for all non-existing routes.
+  app.get('*', (req, res) => {
+    res.status(404).json({ code: 404, errors: ['Not found'] })
+  })
+}
