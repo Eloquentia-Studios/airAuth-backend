@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { createUser } from '../services/users.js'
+import { createUser, getUser } from '../services/users.js'
 import {
   isValidEmail,
   isValidPassword,
@@ -10,7 +10,7 @@ import {
 const usersRouter = Router()
 
 // Handle POST /api/v1/user requests to create a new user.
-usersRouter.post('/', (req, res) => {
+usersRouter.post('/', async (req, res) => {
   try {
     // Fetch the user information from the request body.
     const { username, email, phonenumber, password } = req.body
@@ -35,6 +35,19 @@ usersRouter.post('/', (req, res) => {
       errors.push(
         'Invalid password, must be at least 10 characters long and be a mix of lowercase, uppercase, numbers and special characters.'
       )
+    }
+
+    // Check if there are users with the same username, email or phonenumber.
+    if (await getUser(username)) {
+      errors.push('Username already exists.')
+    }
+
+    if (await getUser(email)) {
+      errors.push('Email already exists.')
+    }
+
+    if (phonenumber && (await getUser(phonenumber))) {
+      errors.push('Phone number already exists.')
     }
 
     // Respond with 400 if the user information is invalid.
