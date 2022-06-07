@@ -29,4 +29,7 @@ export const isAuthenticated: RequestHandler = (req, res, next) => {
 
   // Set the user in the request object.
   req.user = decoded
+
+  // Continue with the request.
+  next()
 }
