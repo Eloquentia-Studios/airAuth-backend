@@ -9,6 +9,7 @@ import {
 import { generateToken } from '../services/jwt.js'
 import { isString, isValidUserInformation } from '../services/validate.js'
 import { isAuthenticated } from '../middlewares/isAuthenticated.js'
+import { internalServerErrorResponse } from './../lib/internalServerErrorResponse.js'
 
 const usersRouter = Router()
 
@@ -35,10 +36,7 @@ usersRouter.post('/', async (req, res) => {
 
     res.status(200).json({ message: 'Success!' })
   } catch (error) {
-    res
-      .status(500)
-      .json({ code: 500, errors: ['Internal server error occured'] })
-    console.error(error)
+    internalServerErrorResponse(error, res)
   }
 })
 
@@ -68,10 +66,7 @@ usersRouter.post('/login', async (req, res) => {
 
     res.status(200).json({ token })
   } catch (error) {
-    res
-      .status(500)
-      .json({ code: 500, errors: ['Internal server error occured'] })
-    console.error(error)
+    internalServerErrorResponse(error, res)
   }
 })
 
@@ -87,10 +82,7 @@ usersRouter.delete('/', isAuthenticated, async (req, res) => {
     // Respond with 200 if the user was deleted.
     return res.status(200).json({ message: 'Success!' })
   } catch (error) {
-    res
-      .status(500)
-      .json({ code: 500, errors: ['Internal server error occured'] })
-    console.error(error)
+    internalServerErrorResponse(error, res)
   }
 })
 
@@ -125,10 +117,7 @@ usersRouter.patch('/', isAuthenticated, async (req, res) => {
 
     res.status(200).json({ message: 'Success!' })
   } catch (error) {
-    res
-      .status(500)
-      .json({ code: 500, errors: ['Internal server error occured'] })
-    console.error(error)
+    internalServerErrorResponse(error, res)
   }
 })
 
@@ -153,10 +142,7 @@ usersRouter.get('/', isAuthenticated, async (req, res) => {
     // Respond with 200 if the user was found.
     return res.status(200).json({ id, username, email, phonenumber })
   } catch (error) {
-    res
-      .status(500)
-      .json({ code: 500, errors: ['Internal server error occured'] })
-    console.error(error)
+    internalServerErrorResponse(error, res)
   }
 })
 

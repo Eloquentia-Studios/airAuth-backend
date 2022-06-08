@@ -3,6 +3,7 @@ import { isAuthenticated } from '../middlewares/isAuthenticated.js'
 import { isValidOtpUrl } from '../services/validate.js'
 import { addOtp, deleteOtp, getOtps } from '../services/otp.js'
 import { isOtpOwner } from '../middlewares/isOtpOwner.js'
+import { internalServerErrorResponse } from '../lib/internalServerErrorResponse.js'
 
 const otpRouter = Router()
 
@@ -21,8 +22,7 @@ otpRouter.post('/', isAuthenticated, async (req, res) => {
     // Return the OTP.
     return res.status(200).json({ id: otp.id })
   } catch (error) {
-    res.status(500).json({ code: 500, errors: ['Internal server error'] })
-    console.error(error)
+    internalServerErrorResponse(error, res)
   }
 })
 
@@ -41,8 +41,7 @@ otpRouter.get('/', isAuthenticated, async (req, res) => {
     // Return the OTPs.
     return res.status(200).json({ otps: responseOtps })
   } catch (error) {
-    res.status(500).json({ code: 500, errors: ['Internal server error'] })
-    console.error(error)
+    internalServerErrorResponse(error, res)
   }
 })
 
@@ -55,8 +54,7 @@ otpRouter.delete('/:id', isAuthenticated, isOtpOwner, async (req, res) => {
     // Return the deleted OTP.
     res.status(200).json({ id: deletedOtp.id, otpurl: deletedOtp.url })
   } catch (error) {
-    res.status(500).json({ code: 500, errors: ['Internal server error'] })
-    console.error(error)
+    internalServerErrorResponse(error, res)
   }
 })
 

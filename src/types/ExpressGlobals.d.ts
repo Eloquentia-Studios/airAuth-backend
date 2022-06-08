@@ -1,9 +1,9 @@
-import type TokenData from './TokenData.d'
+import type TokenUserData from './TokenData.d'
 
 declare global {
   namespace Express {
     export interface Request {
-      user: TokenData
+      user: TokenUserData
     }
   }
 }
