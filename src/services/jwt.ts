@@ -1,7 +1,7 @@
 import type { User } from '@prisma/client'
 import fs from 'fs'
 import jwt from 'jsonwebtoken'
-import type TokenData from '../types/TokenData.d'
+import type TokenUserData from '../types/TokenData.d'
 
 // Load private and public keys.
 const privateKey = fs.readFileSync('./config/pems/private.key', 'utf8')
@@ -35,12 +35,12 @@ export const generateToken = (user: User): string => {
  * @param token Token to verify.
  * @returns Token data if the token is valid, null otherwise.
  */
-export const verifyToken = (token: string): TokenData | null => {
+export const verifyToken = (token: string): TokenUserData | null => {
   try {
     // Verify the token.
     const decoded = jwt.verify(token, publicKey, {
       algorithms: ['ES512']
-    }) as TokenData
+    }) as TokenUserData
 
     // Return the user if the token is valid.
     return decoded
