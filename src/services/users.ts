@@ -1,4 +1,5 @@
 import type { User } from '@prisma/client'
+import type UserUpdates from '../types/UserUpdates.d'
 import { hashPassword, verifyPassword } from './password.js'
 import prisma from './prisma.js'
 
@@ -86,5 +87,24 @@ export const deleteUser = async (id: string): Promise<User> => {
     where: {
       id
     }
+  })
+}
+
+export const updateUser = async (
+  id: string,
+  updates: UserUpdates
+): Promise<User> => {
+  // Hash password if it is set.
+  if (updates.password) {
+    updates.passwordHash = await hashPassword(updates.password)
+    delete updates.password
+  }
+
+  // Update user.
+  return await prisma.user.update({
+    where: {
+      id
+    },
+    data: updates
   })
 }
