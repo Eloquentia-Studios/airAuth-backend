@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { isAuthenticated } from '../middlewares/isAuthenticated.js'
 import { isValidOtpUrl } from '../services/validate.js'
-import { addOtp, getOtps } from '../services/otp.js'
+import { addOtp, deleteOtp, getOtp, getOtps } from '../services/otp.js'
 
 const otpRouter = Router()
 
@@ -39,6 +39,31 @@ otpRouter.get('/', isAuthenticated, async (req, res) => {
 
     // Return the OTPs.
     return res.status(200).json({ otps: responseOtps })
+  } catch (error) {
+    res.status(500).json({ code: 500, errors: ['Internal server error'] })
+    console.error(error)
+  }
+})
+
+// Handle DELETE /api/v1/otp/:id requests to delete an OTP.
+otpRouter.delete('/:id', isAuthenticated, async (req, res) => {
+  try {
+    // Get the OTP.
+    const otp = await getOtp(req.params.id)
+
+    // Check that the OTP exists.
+    if (!otp)
+      return res.status(404).json({ code: 404, errors: ['OTP not found'] })
+
+    // Check that the OTP belongs to the user.
+    if (otp.ownerId !== req.user.id)
+      return res.status(403).json({ code: 403, errors: ['Forbidden'] })
+
+    // Delete the OTP.
+    const deletedOtp = await deleteOtp(req.params.id)
+
+    // Return the deleted OTP.
+    res.status(200).json({ id: deletedOtp.id, otpurl: deletedOtp.url })
   } catch (error) {
     res.status(500).json({ code: 500, errors: ['Internal server error'] })
     console.error(error)

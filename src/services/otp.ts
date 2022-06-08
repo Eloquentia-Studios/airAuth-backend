@@ -40,3 +40,35 @@ export const getOtps = async (ownerId: string): Promise<Otp[]> => {
 
   return otps
 }
+
+/**
+ * Get an OTP by id.
+ *
+ * @param id Otp id.
+ * @returns Otp object, or null if not found.
+ */
+export const getOtp = async (id: string): Promise<Otp | null> => {
+  const otp = await prisma.otp.findFirst({
+    where: {
+      id
+    }
+  })
+
+  return otp
+}
+
+/**
+ * Delete an OTP by id.
+ *
+ * @param id Otp id.
+ * @returns The deleted Otp object.
+ */
+export const deleteOtp = async (id: string): Promise<Otp> => {
+  const deletedOtp = await prisma.otp.delete({
+    where: {
+      id
+    }
+  })
+
+  return deletedOtp
+}
