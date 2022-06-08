@@ -1,7 +1,8 @@
 import { Router } from 'express'
 import { isAuthenticated } from '../middlewares/isAuthenticated.js'
 import { isValidOtpUrl } from '../services/validate.js'
-import { addOtp, deleteOtp, getOtp, getOtps } from '../services/otp.js'
+import { addOtp, deleteOtp, getOtps } from '../services/otp.js'
+import { isOtpOwner } from '../middlewares/isOtpOwner.js'
 import { internalServerErrorResponse } from '../lib/internalServerErrorResponse.js'
 
 const otpRouter = Router()
@@ -45,19 +46,8 @@ otpRouter.get('/', isAuthenticated, async (req, res) => {
 })
 
 // Handle DELETE /api/v1/otp/:id requests to delete an OTP.
-otpRouter.delete('/:id', isAuthenticated, async (req, res) => {
+otpRouter.delete('/:id', isAuthenticated, isOtpOwner, async (req, res) => {
   try {
-    // Get the OTP.
-    const otp = await getOtp(req.params.id)
-
-    // Check that the OTP exists.
-    if (!otp)
-      return res.status(404).json({ code: 404, errors: ['OTP not found'] })
-
-    // Check that the OTP belongs to the user.
-    if (otp.ownerId !== req.user.id)
-      return res.status(403).json({ code: 403, errors: ['Forbidden'] })
-
     // Delete the OTP.
     const deletedOtp = await deleteOtp(req.params.id)
 
