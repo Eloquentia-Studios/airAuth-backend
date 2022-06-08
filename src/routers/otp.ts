@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { isAuthenticated } from '../middlewares/isAuthenticated.js'
 import { isValidOtpUrl } from '../services/validate.js'
-import { addOtp, getOtp, getOtps } from '../services/otp.js'
+import { addOtp, deleteOtp, getOtp, getOtps } from '../services/otp.js'
 
 const otpRouter = Router()
 
@@ -58,6 +58,12 @@ otpRouter.delete('/:id', isAuthenticated, async (req, res) => {
     // Check that the OTP belongs to the user.
     if (otp.ownerId !== req.user.id)
       return res.status(403).json({ code: 403, errors: ['Forbidden'] })
+
+    // Delete the OTP.
+    const deletedOtp = await deleteOtp(req.params.id)
+
+    // Return the deleted OTP.
+    res.status(200).json({ id: deletedOtp.id, otpurl: deletedOtp.url })
   } catch (error) {
     res.status(500).json({ code: 500, errors: ['Internal server error'] })
     console.error(error)
