@@ -1,5 +1,10 @@
 import { Router } from 'express'
-import { createUser, getUser, validateUser } from '../services/users.js'
+import {
+  createUser,
+  deleteUser,
+  getUser,
+  validateUser
+} from '../services/users.js'
 import { generateToken } from '../services/jwt.js'
 import {
   isString,
@@ -8,6 +13,8 @@ import {
   isValidPhoneNumber,
   isValidUsername
 } from '../services/validate.js'
+import { isAuthenticated } from '../middlewares/isAuthenticated.js'
+import { getOtps } from '../services/otp.js'
 
 const usersRouter = Router()
 
@@ -92,6 +99,25 @@ usersRouter.post('/login', async (req, res) => {
     const token = generateToken(user)
 
     res.status(200).json({ token })
+  } catch (error) {
+    res
+      .status(500)
+      .json({ code: 500, errors: ['Internal server error occured'] })
+    console.error(error)
+  }
+})
+
+// Handle DELETE /api/v1/user requests to delete their user account.
+usersRouter.delete('/', isAuthenticated, async (req, res) => {
+  try {
+    // Get the current user.
+    const reqUser = req.user
+
+    // Delete the user.
+    await deleteUser(reqUser.id)
+
+    // Respond with 200 if the user was deleted.
+    return res.status(200).json({ message: 'Success!' })
   } catch (error) {
     res
       .status(500)
