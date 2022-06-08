@@ -1,4 +1,5 @@
 import validator from 'validator'
+import { getUser } from './users.js'
 
 /**
  * Checks if the given value is a valid username.
@@ -101,4 +102,52 @@ export const isValidOtpUrl = (url: string): boolean => {
   if (period && !['30', '60', '90'].includes(period)) return false
 
   return true
+}
+
+export const isValidUserInformation = async (
+  username: string,
+  email: string,
+  phonenumber: string,
+  password: string,
+  partialAllowed: boolean
+): Promise<string[]> => {
+  const errors = []
+
+  if (
+    !(isValidUsername(username) || (partialAllowed && username === undefined))
+  ) {
+    errors.push(
+      'Invalid username, must be between 3 and 40 characters and alphanumeric.'
+    )
+  }
+
+  if (!(isValidEmail(email) || (partialAllowed && email === undefined))) {
+    errors.push('Invalid email.')
+  }
+
+  if (phonenumber && !isValidPhoneNumber(phonenumber)) {
+    errors.push('Invalid phone number.')
+  }
+
+  if (
+    !(isValidPassword(password) || (partialAllowed && password === undefined))
+  ) {
+    errors.push(
+      'Invalid password, must be at least 10 characters long and be a mix of lowercase, uppercase, numbers and special characters.'
+    )
+  }
+
+  // Check if there are users with the same username, email or phonenumber.
+  if (username && (await getUser(username))) {
+    errors.push('Username already exists.')
+  }
+
+  if (email && (await getUser(email))) {
+    errors.push('Email already exists.')
+  }
+
+  if (phonenumber && (await getUser(phonenumber))) {
+    errors.push('Phone number already exists.')
+  }
+  return errors
 }
