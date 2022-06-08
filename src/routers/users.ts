@@ -9,7 +9,7 @@ import {
 import { generateToken } from '../services/jwt.js'
 import { isString, isValidUserInformation } from '../services/validate.js'
 import { isAuthenticated } from '../middlewares/isAuthenticated.js'
-import { internalServerErrorResponse } from './../lib/internalServerErrorResponse'
+import { internalServerErrorResponse } from './../lib/internalServerErrorResponse.js'
 
 const usersRouter = Router()
 
