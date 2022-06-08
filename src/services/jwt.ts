@@ -17,10 +17,7 @@ export const generateToken = (user: User): string => {
   // Create a new JWT token.
   const token = jwt.sign(
     {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      phonenumber: user.phonenumber
+      id: user.id
     },
     privateKey,
     {
