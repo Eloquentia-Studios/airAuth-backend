@@ -41,6 +41,7 @@ export const getUser = async (identifier: string): Promise<User | null> => {
   const user = await prisma.user.findFirst({
     where: {
       OR: [
+        { id: identifier },
         { username: identifier },
         { email: identifier },
         { phonenumber: identifier }
