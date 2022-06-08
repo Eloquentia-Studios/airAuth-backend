@@ -3,6 +3,7 @@ import {
   createUser,
   deleteUser,
   getUser,
+  updateUser,
   validateUser
 } from '../services/users.js'
 import { generateToken } from '../services/jwt.js'
@@ -113,6 +114,14 @@ usersRouter.patch('/', isAuthenticated, async (req, res) => {
 
     // Respond with 400 if the user information is invalid.
     if (errors.length > 0) return res.status(400).json({ code: 400, errors })
+
+    // Update the user.
+    await updateUser(reqUser.id, {
+      username,
+      email,
+      phonenumber,
+      password
+    })
 
     res.status(200).json({ message: 'Success!' })
   } catch (error) {
