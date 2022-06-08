@@ -74,3 +74,17 @@ export const validateUser = async (
 
   return user
 }
+
+/**
+ * Delete a user.
+ *
+ * @param id ID of the user to delete.
+ * @returns The user if the user could be deleted.
+ */
+export const deleteUser = async (id: string): Promise<User> => {
+  return await prisma.user.delete({
+    where: {
+      id
+    }
+  })
+}
