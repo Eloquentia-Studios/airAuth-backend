@@ -40,3 +40,19 @@ export const getOtps = async (ownerId: string): Promise<Otp[]> => {
 
   return otps
 }
+
+/**
+ * Get an OTP by id.
+ *
+ * @param id Otp id.
+ * @returns Otp object, or null if not found.
+ */
+export const getOtp = async (id: string): Promise<Otp | null> => {
+  const otp = await prisma.otp.findFirst({
+    where: {
+      id
+    }
+  })
+
+  return otp
+}
