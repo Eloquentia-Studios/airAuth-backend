@@ -132,4 +132,32 @@ usersRouter.patch('/', isAuthenticated, async (req, res) => {
   }
 })
 
+// Handle GET /api/v1/user requests to get the user's information.
+usersRouter.get('/', isAuthenticated, async (req, res) => {
+  try {
+    // Get the current user.
+    const reqUser = req.user
+
+    // Get the user.
+    const user = await getUser(reqUser.id)
+
+    // Respond with 404 if the user does not exist.
+    if (!user)
+      return res
+        .status(404)
+        .json({ code: 404, errors: ['User does not exist'] })
+
+    // Extract the user's information.
+    const { id, username, email, phonenumber } = user
+
+    // Respond with 200 if the user was found.
+    return res.status(200).json({ id, username, email, phonenumber })
+  } catch (error) {
+    res
+      .status(500)
+      .json({ code: 500, errors: ['Internal server error occured'] })
+    console.error(error)
+  }
+})
+
 export default usersRouter
