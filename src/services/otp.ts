@@ -22,3 +22,21 @@ export const addOtp = async (url: string, ownerId: string): Promise<Otp> => {
 
   return otp
 }
+
+/**
+ * Get all OTPs for a user.
+ *
+ * @param ownerId Owner id.
+ * @returns Array of Otp objects.
+ */
+export const getOtps = async (ownerId: string): Promise<Otp[]> => {
+  const otps = await prisma.otp.findMany({
+    where: {
+      owner: {
+        id: ownerId
+      }
+    }
+  })
+
+  return otps
+}

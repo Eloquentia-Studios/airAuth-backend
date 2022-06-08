@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { isAuthenticated } from '../middlewares/isAuthenticated.js'
 import { isValidOtpUrl } from '../services/validate.js'
-import { addOtp } from '../services/otp.js'
+import { addOtp, getOtps } from '../services/otp.js'
 
 const otpRouter = Router()
 
@@ -19,6 +19,26 @@ otpRouter.post('/', isAuthenticated, async (req, res) => {
 
     // Return the OTP.
     return res.status(200).json({ id: otp.id })
+  } catch (error) {
+    res.status(500).json({ code: 500, errors: ['Internal server error'] })
+    console.error(error)
+  }
+})
+
+// Handle GET /api/v1/otp requests to get all OTPs.
+otpRouter.get('/', isAuthenticated, async (req, res) => {
+  try {
+    // Get all OTPs for the user.
+    let otps = await getOtps(req.user.id)
+
+    // Map otps to only return url and id
+    const responseOtps = otps.map((otp) => ({
+      id: otp.id,
+      url: otp.url
+    }))
+
+    // Return the OTPs.
+    return res.status(200).json({ otps: responseOtps })
   } catch (error) {
     res.status(500).json({ code: 500, errors: ['Internal server error'] })
     console.error(error)
