@@ -35,7 +35,9 @@ otpRouter.get('/', isAuthenticated, async (req, res) => {
     // Map otps to only return url and id
     const responseOtps = otps.map((otp) => ({
       id: otp.id,
-      url: otp.url
+      url: otp.url,
+      customIssuer: otp.issuer,
+      customLabel: otp.label
     }))
 
     // Return the OTPs.
