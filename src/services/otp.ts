@@ -72,3 +72,29 @@ export const deleteOtp = async (id: string): Promise<Otp> => {
 
   return deletedOtp
 }
+
+/**
+ * Update OTP issuer and label.
+ *
+ * @param id Otp id.
+ * @param issuer Otp issuer.
+ * @param label Otp label.
+ * @returns The updated Otp object.
+ */
+export const updateOtp = async (
+  id: string,
+  issuer?: string | null,
+  label?: string | null
+): Promise<Otp> => {
+  const updatedOtp = await prisma.otp.update({
+    where: {
+      id
+    },
+    data: {
+      issuer,
+      label
+    }
+  })
+
+  return updatedOtp
+}

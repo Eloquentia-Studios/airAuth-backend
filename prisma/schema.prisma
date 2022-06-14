@@ -24,6 +24,8 @@ model User {
 model Otp {
   id        String   @id @default(uuid())
   url       String
+  issuer    String?
+  label     String?
   owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   ownerId   String
   createdAt DateTime @default(now())

@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { isAuthenticated } from '../middlewares/isAuthenticated.js'
-import { isValidOtpUrl } from '../services/validate.js'
-import { addOtp, deleteOtp, getOtps } from '../services/otp.js'
+import { isValidOtpUrl, isString } from '../services/validate.js'
+import { addOtp, deleteOtp, getOtps, updateOtp } from '../services/otp.js'
 import { isOtpOwner } from '../middlewares/isOtpOwner.js'
 import { internalServerErrorResponse } from '../lib/internalServerErrorResponse.js'
 
@@ -35,7 +35,9 @@ otpRouter.get('/', isAuthenticated, async (req, res) => {
     // Map otps to only return url and id
     const responseOtps = otps.map((otp) => ({
       id: otp.id,
-      url: otp.url
+      url: otp.url,
+      customIssuer: otp.issuer,
+      customLabel: otp.label
     }))
 
     // Return the OTPs.
@@ -53,6 +55,29 @@ otpRouter.delete('/:id', isAuthenticated, isOtpOwner, async (req, res) => {
 
     // Return the deleted OTP.
     res.status(200).json({ id: deletedOtp.id, otpurl: deletedOtp.url })
+  } catch (error) {
+    internalServerErrorResponse(error, res)
+  }
+})
+
+// Handle POST /api/v1/otp/:id requests to set custom issuer and label.
+otpRouter.post('/:id', isAuthenticated, isOtpOwner, async (req, res) => {
+  try {
+    const { issuer, label } = req.body
+
+    const errors = []
+
+    if (!isString(issuer) && issuer !== null && issuer !== undefined)
+      errors.push('Issuer must be a string, if provided.')
+    if (!isString(label) && label !== null && label !== undefined)
+      errors.push('Label must be a string, if provided.')
+
+    if (errors.length > 0) return res.status(400).json({ code: 400, errors })
+
+    // Update the OTP.
+    await updateOtp(req.params.id, issuer, label)
+
+    res.status(200).json({ message: 'Success' })
   } catch (error) {
     internalServerErrorResponse(error, res)
   }
