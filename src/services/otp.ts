@@ -83,8 +83,8 @@ export const deleteOtp = async (id: string): Promise<Otp> => {
  */
 export const updateOtp = async (
   id: string,
-  issuer?: string,
-  label?: string
+  issuer?: string | null,
+  label?: string | null
 ): Promise<Otp> => {
   const updatedOtp = await prisma.otp.update({
     where: {

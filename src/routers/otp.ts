@@ -67,9 +67,9 @@ otpRouter.post('/:id', isAuthenticated, isOtpOwner, async (req, res) => {
 
     const errors = []
 
-    if (!isString(issuer) && issuer !== undefined)
+    if (!isString(issuer) && issuer !== null && issuer !== undefined)
       errors.push('Issuer must be a string, if provided.')
-    if (!isString(label) && label !== undefined)
+    if (!isString(label) && label !== null && label !== undefined)
       errors.push('Label must be a string, if provided.')
 
     if (errors.length > 0) return res.status(400).json({ code: 400, errors })
