@@ -1,7 +1,8 @@
-import type { User } from '@prisma/client'
+import type { KeyPair, User } from '@prisma/client'
 import fs from 'fs'
 import jwt from 'jsonwebtoken'
 import type TokenUserData from '../types/TokenData.d'
+import type UserWithKeypair from '../types/UserWithKeypair.d'
 
 // Load private and public keys.
 const privateKey = fs.readFileSync('./config/pems/private.key', 'utf8')
@@ -13,11 +14,17 @@ const publicKey = fs.readFileSync('./config/pems/public.key', 'utf8')
  * @param user User to create a token for.
  * @returns The JWT token.
  */
-export const generateToken = (user: User): string => {
+export const generateToken = (user: UserWithKeypair): string => {
+  // Check if the user has a keypair.
+  if (!user.keyPair) {
+    throw new Error('User has no keypair')
+  }
+
   // Create a new JWT token.
   const token = jwt.sign(
     {
-      id: user.id
+      id: user.id,
+      publicKey: user.keyPair.publicKey
     },
     privateKey,
     {

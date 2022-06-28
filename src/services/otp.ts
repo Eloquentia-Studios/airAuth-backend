@@ -1,4 +1,5 @@
 import type { Otp } from '@prisma/client'
+import { encryptToHex } from './encryption.js'
 import prisma from './prisma.js'
 
 /**
@@ -6,12 +7,17 @@ import prisma from './prisma.js'
  *
  * @param url Otp url.
  * @param ownerId Owner id.
+ * @param publicKey The public key of the owner.
  * @returns Otp object.
  */
-export const addOtp = async (url: string, ownerId: string): Promise<Otp> => {
+export const addOtp = async (
+  url: string,
+  ownerId: string,
+  publicKey: string
+): Promise<Otp> => {
   const otp = await prisma.otp.create({
     data: {
-      url,
+      url: encryptToHex(url, publicKey),
       owner: {
         connect: {
           id: ownerId
@@ -83,6 +89,7 @@ export const deleteOtp = async (id: string): Promise<Otp> => {
  */
 export const updateOtp = async (
   id: string,
+  publicKey: string,
   issuer?: string | null,
   label?: string | null
 ): Promise<Otp> => {
@@ -91,8 +98,8 @@ export const updateOtp = async (
       id
     },
     data: {
-      issuer,
-      label
+      issuer: issuer ? encryptToHex(issuer, publicKey) : null,
+      label: label ? encryptToHex(label, publicKey) : null
     }
   })
 

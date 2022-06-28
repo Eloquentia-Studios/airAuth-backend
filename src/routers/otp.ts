@@ -17,7 +17,7 @@ otpRouter.post('/', isAuthenticated, async (req, res) => {
       return res.status(400).json({ code: 400, errors: ['Invalid OTP URL'] })
 
     // Add the OTP to the database.
-    const otp = await addOtp(otpurl, req.user.id)
+    const otp = await addOtp(otpurl, req.user.id, req.user.publicKey)
 
     // Return the OTP.
     return res.status(200).json({ id: otp.id })
@@ -75,7 +75,7 @@ otpRouter.post('/:id', isAuthenticated, isOtpOwner, async (req, res) => {
     if (errors.length > 0) return res.status(400).json({ code: 400, errors })
 
     // Update the OTP.
-    await updateOtp(req.params.id, issuer, label)
+    await updateOtp(req.params.id, req.user.publicKey, issuer, label)
 
     res.status(200).json({ message: 'Success' })
   } catch (error) {

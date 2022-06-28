@@ -1,5 +1,6 @@
 import type { User } from '@prisma/client'
 import type UserUpdates from '../types/UserUpdates.d'
+import type UserWithKeypair from '../types/UserWithKeypair.d'
 import { generateKeyPair, symmetricEncrypt } from './encryption.js'
 import { hashPassword, verifyPassword } from './password.js'
 import prisma from './prisma.js'
@@ -50,7 +51,9 @@ export const createUser = async (
   return user
 }
 
-export const getUser = async (identifier: string): Promise<User | null> => {
+export const getUser = async (
+  identifier: string
+): Promise<UserWithKeypair | null> => {
   const user = await prisma.user.findFirst({
     where: {
       OR: [
@@ -59,7 +62,8 @@ export const getUser = async (identifier: string): Promise<User | null> => {
         { email: identifier },
         { phonenumber: identifier }
       ]
-    }
+    },
+    include: { keyPair: true }
   })
   return user
 }
@@ -74,7 +78,7 @@ export const getUser = async (identifier: string): Promise<User | null> => {
 export const validateUser = async (
   identifier: string,
   password: string
-): Promise<User | null> => {
+): Promise<UserWithKeypair | null> => {
   // Get the user.
   const user = await getUser(identifier)
 

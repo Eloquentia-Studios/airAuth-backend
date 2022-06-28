@@ -3,11 +3,12 @@ import type KeyPair from '../types/KeyPair'
 
 /**
  * Generate a random ED448 key pair.
- *
+ *crypto
  * @returns Private and public key as a KeyPair object.
  */
 export const generateKeyPair = async (): Promise<KeyPair> => {
-  const keys = crypto.generateKeyPairSync('ed448', {
+  const keys = crypto.generateKeyPairSync('rsa', {
+    modulusLength: 4096,
     publicKeyEncoding: {
       type: 'spki',
       format: 'pem'
@@ -113,8 +114,11 @@ export const decryptBuffer = (data: Buffer, privateKey: Buffer): Buffer =>
  * @param publicKey Public key buffer to use for encryption.
  * @returns Encrypted buffer as HEX string.
  */
-export const encryptToHex = (data: Buffer, publicKey: Buffer): string =>
-  encryptBuffer(data, publicKey).toString('hex')
+export const encryptToHex = (data: string, publicKey: string): string =>
+  encryptBuffer(
+    Buffer.from(data, 'utf-8'),
+    Buffer.from(publicKey, 'utf-8')
+  ).toString('hex')
 
 /**
  * Decrypt HEX string using asymmetric encryption
@@ -124,5 +128,5 @@ export const encryptToHex = (data: Buffer, publicKey: Buffer): string =>
  * @param privateKey Private key buffer to use for decryption.
  * @returns Decrypted buffer.
  */
-export const decryptFromHex = (data: string, privateKey: Buffer): Buffer =>
-  decryptBuffer(Buffer.from(data, 'hex'), privateKey)
+export const decryptFromHex = (data: string, privateKey: string): Buffer =>
+  decryptBuffer(Buffer.from(data, 'hex'), Buffer.from(privateKey, 'utf-8'))
