@@ -1,6 +1,6 @@
 import type { User } from '@prisma/client'
 import type UserUpdates from '../types/UserUpdates.d'
-import { generateKeyPair } from './encryption.js'
+import { generateKeyPair, symmetricEncrypt } from './encryption.js'
 import { hashPassword, verifyPassword } from './password.js'
 import prisma from './prisma.js'
 
@@ -30,6 +30,7 @@ export const createUser = async (
   const keyPair = await generateKeyPair()
 
   // Encrypt the users private key.
+  const privateKey = await symmetricEncrypt(keyPair.private, password)
 
   // Create the user.
   const user = await prisma.user.create({
@@ -41,7 +42,7 @@ export const createUser = async (
       keyPair: {
         create: {
           publicKey: keyPair.public,
-          privateKey: keyPair.private
+          privateKey: privateKey
         }
       }
     }
