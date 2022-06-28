@@ -1,5 +1,6 @@
 import type { User } from '@prisma/client'
 import type UserUpdates from '../types/UserUpdates.d'
+import { generateKeyPair } from './encryption.js'
 import { hashPassword, verifyPassword } from './password.js'
 import prisma from './prisma.js'
 
@@ -25,13 +26,24 @@ export const createUser = async (
   // Check if the phonenumber is not set.
   phonenumber = phonenumber || undefined
 
+  // Generate the users keypair.
+  const keyPair = await generateKeyPair()
+
+  // Encrypt the users private key.
+
   // Create the user.
   const user = await prisma.user.create({
     data: {
       username,
       email,
       phonenumber,
-      passwordHash
+      passwordHash,
+      keyPair: {
+        create: {
+          publicKey: keyPair.public,
+          privateKey: keyPair.private
+        }
+      }
     }
   })
   return user
