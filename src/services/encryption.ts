@@ -84,3 +84,45 @@ export const symmetricDecrypt = async (
   const final = cipher.final()
   return Buffer.concat([decrypted, final])
 }
+
+/**
+ * Encrypt data using asymmetric encryption.
+ *
+ * @param data Buffer to encrypt.
+ * @param publicKey Public key buffer to use for encryption.
+ * @returns Encrypted buffer.
+ */
+export const encryptBuffer = (data: Buffer, publicKey: Buffer): Buffer =>
+  crypto.publicEncrypt(publicKey, data)
+
+/**
+ * Decrypt data using asymmetric encryption.
+ *
+ * @param data Buffer to decrypt.
+ * @param privateKey Private key buffer to use for decryption.
+ * @returns Decrypted buffer.
+ */
+export const decryptBuffer = (data: Buffer, privateKey: Buffer): Buffer =>
+  crypto.privateDecrypt(privateKey, data)
+
+/**
+ * Encrypt data using asymmetric encryption
+ * and return the encrypted data as a HEX string.
+ *
+ * @param data Buffer to encrypt.
+ * @param publicKey Public key buffer to use for encryption.
+ * @returns Encrypted buffer as HEX string.
+ */
+export const encryptToHex = (data: Buffer, publicKey: Buffer): string =>
+  encryptBuffer(data, publicKey).toString('hex')
+
+/**
+ * Decrypt HEX string using asymmetric encryption
+ * and return the decrypted data as a Buffer.
+ *
+ * @param data Hex string to decrypt.
+ * @param privateKey Private key buffer to use for decryption.
+ * @returns Decrypted buffer.
+ */
+export const decryptFromHex = (data: string, privateKey: Buffer): Buffer =>
+  decryptBuffer(Buffer.from(data, 'hex'), privateKey)
