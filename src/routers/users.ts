@@ -64,7 +64,13 @@ usersRouter.post('/login', async (req, res) => {
     // Create a JWT token for the user.
     const token = generateToken(user)
 
-    res.status(200).json({ token })
+    res
+      .status(200)
+      .json({
+        token,
+        privateKey: user.keyPair?.privateKey,
+        iv: process.env.CIPHER_IV
+      })
   } catch (error) {
     internalServerErrorResponse(error, res)
   }
