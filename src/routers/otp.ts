@@ -12,10 +12,6 @@ otpRouter.post('/', isAuthenticated, async (req, res) => {
   try {
     const { otpurl } = req.body
 
-    // Check that the URL is valid.
-    if (!isValidOtpUrl(otpurl))
-      return res.status(400).json({ code: 400, errors: ['Invalid OTP URL'] })
-
     // Add the OTP to the database.
     const otp = await addOtp(otpurl, req.user.id)
 
