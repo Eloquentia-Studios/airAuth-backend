@@ -1,5 +1,6 @@
-import type { User } from '@prisma/client'
+import type { User, KeyPair } from '@prisma/client'
 import type UserUpdates from '../types/UserUpdates.d'
+import { generateEncryptedKeyPair } from './encryption.js'
 import { hashPassword, verifyPassword } from './password.js'
 import prisma from './prisma.js'
 
@@ -18,27 +19,41 @@ export const createUser = async (
   email: string,
   password: string,
   phonenumber?: string
-): Promise<User> => {
+): Promise<User & { keyPair: KeyPair }> => {
   // Hash the password.
   const passwordHash = await hashPassword(password)
 
   // Check if the phonenumber is not set.
   phonenumber = phonenumber || undefined
 
+  // Generate a keypair for the user.
+  const keypair = await generateEncryptedKeyPair(password)
+
   // Create the user.
-  const user = await prisma.user.create({
+  const user = (await prisma.user.create({
     data: {
       username,
       email,
       phonenumber,
-      passwordHash
+      passwordHash,
+      keyPair: {
+        create: {
+          ...keypair
+        }
+      }
+    },
+    include: {
+      keyPair: true
     }
-  })
+  })) as User & { keyPair: KeyPair }
+
   return user
 }
 
-export const getUser = async (identifier: string): Promise<User | null> => {
-  const user = await prisma.user.findFirst({
+export const getUser = async (
+  identifier: string
+): Promise<(User & { keyPair: KeyPair }) | null> => {
+  const user = (await prisma.user.findFirst({
     where: {
       OR: [
         { id: identifier },
@@ -46,8 +61,11 @@ export const getUser = async (identifier: string): Promise<User | null> => {
         { email: identifier },
         { phonenumber: identifier }
       ]
+    },
+    include: {
+      keyPair: true
     }
-  })
+  })) as User & { keyPair: KeyPair }
   return user
 }
 
@@ -61,7 +79,7 @@ export const getUser = async (identifier: string): Promise<User | null> => {
 export const validateUser = async (
   identifier: string,
   password: string
-): Promise<User | null> => {
+): Promise<(User & { keyPair: KeyPair }) | null> => {
   // Get the user.
   const user = await getUser(identifier)
 

@@ -32,9 +32,9 @@ usersRouter.post('/', async (req, res) => {
     if (errors.length > 0) return res.status(400).json({ code: 400, errors })
 
     // Create a new user.
-    const user = createUser(username, email, password, phonenumber)
+    const { keyPair } = await createUser(username, email, password, phonenumber)
 
-    res.status(200).json({ message: 'Success!' })
+    res.status(200).json({ message: 'Success' })
   } catch (error) {
     internalServerErrorResponse(error, res)
   }
@@ -64,7 +64,17 @@ usersRouter.post('/login', async (req, res) => {
     // Create a JWT token for the user.
     const token = generateToken(user)
 
-    res.status(200).json({ token })
+    // Get encryption iv.
+    const iv = process.env.CIPHER_IV || ''
+
+    res.status(200).json({
+      token,
+      keyPair: {
+        privateKey: user.keyPair.privateKey,
+        publicKey: user.keyPair.publicKey
+      },
+      iv
+    })
   } catch (error) {
     internalServerErrorResponse(error, res)
   }
