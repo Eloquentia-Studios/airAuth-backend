@@ -10,6 +10,8 @@ import { generateToken } from '../services/jwt.js'
 import { isString, isValidUserInformation } from '../services/validate.js'
 import { isAuthenticated } from '../middlewares/isAuthenticated.js'
 import { internalServerErrorResponse } from './../lib/internalServerErrorResponse.js'
+import createResponseError from '../lib/createResponseError.js'
+import HttpError from '../enums/HttpError.js'
 
 const usersRouter = Router()
 
@@ -29,7 +31,10 @@ usersRouter.post('/', async (req, res) => {
     )
 
     // Respond with 400 if the user information is invalid.
-    if (errors.length > 0) return res.status(400).json({ code: 400, errors })
+    if (errors.length > 0)
+      return res
+        .status(400)
+        .json(createResponseError(HttpError.BadRequest, errors))
 
     // Create a new user.
     const { keyPair } = await createUser(username, email, password, phonenumber)
@@ -52,7 +57,10 @@ usersRouter.post('/login', async (req, res) => {
 
     if (!isString(password)) errors.push('Password must be a string')
 
-    if (errors.length > 0) return res.status(400).json({ code: 400, errors })
+    if (errors.length > 0)
+      return res
+        .status(400)
+        .json(createResponseError(HttpError.BadRequest, errors))
 
     // Validate the user.
     const user = await validateUser(identifier, password)
@@ -115,7 +123,10 @@ usersRouter.patch('/', isAuthenticated, async (req, res) => {
     )
 
     // Respond with 400 if the user information is invalid.
-    if (errors.length > 0) return res.status(400).json({ code: 400, errors })
+    if (errors.length > 0)
+      return res
+        .status(400)
+        .json(createResponseError(HttpError.BadRequest, errors))
 
     // Update the user.
     await updateUser(reqUser.id, {
@@ -144,7 +155,7 @@ usersRouter.get('/', isAuthenticated, async (req, res) => {
     if (!user)
       return res
         .status(404)
-        .json({ code: 404, errors: ['User does not exist'] })
+        .json(createResponseError(HttpError.NotFound, 'User does not exist'))
 
     // Extract the user's information.
     const { id, username, email, phonenumber } = user
