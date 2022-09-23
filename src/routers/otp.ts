@@ -4,6 +4,8 @@ import { isValidOtpUrl, isString } from '../services/validate.js'
 import { addOtp, deleteOtp, getOtps, updateOtp } from '../services/otp.js'
 import { isOtpOwner } from '../middlewares/isOtpOwner.js'
 import { internalServerErrorResponse } from '../lib/internalServerErrorResponse.js'
+import createResponseError from '../lib/createResponseError.js'
+import HttpError from '../enums/HttpError.js'
 
 const otpRouter = Router()
 
@@ -68,7 +70,10 @@ otpRouter.post('/:id', isAuthenticated, isOtpOwner, async (req, res) => {
     if (!isString(label) && label !== null && label !== undefined)
       errors.push('Label must be a string, if provided.')
 
-    if (errors.length > 0) return res.status(400).json({ code: 400, errors })
+    if (errors.length > 0)
+      return res
+        .status(400)
+        .json(createResponseError(HttpError.BadRequest, errors))
 
     // Update the OTP.
     await updateOtp(req.params.id, issuer, label)
