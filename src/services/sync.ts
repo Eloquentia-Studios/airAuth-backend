@@ -1,28 +1,10 @@
 import fs from 'fs'
 import { z } from 'zod'
 import { connectToServers, startWebsocket } from './websocket.js'
+import type { SyncConfiguration } from '../types/SyncConfiguration'
+import { syncConfiguration } from '../types/SyncConfiguration.js'
 
 let configuration: SyncConfiguration
-
-const RemoteServer = z.object({
-  name: z.string().min(1).max(100),
-  address: z.string().min(1).max(100)
-})
-
-export type RemoteServer = z.infer<typeof RemoteServer>
-
-// TODO: Add custom error messages.
-const SyncConfiguration = z.object({
-  enabled: z.boolean(),
-  server: z.object({
-    name: z.string().min(1).max(100),
-    port: z.number().int().min(1).max(65535)
-  }),
-  servers: z.array(RemoteServer),
-  secret: z.string().min(15).max(512)
-})
-
-export type SyncConfiguration = z.infer<typeof SyncConfiguration>
 
 /**
  * Initialize the sync service.
@@ -33,7 +15,7 @@ export const initSync = () => {
   configuration = config.sync as SyncConfiguration
 
   // Check configuration validity.
-  const result = SyncConfiguration.safeParse(configuration)
+  const result = syncConfiguration.safeParse(configuration)
   if (!result.success) {
     console.error(result.error)
     throw new Error('Sync configuration is invalid')
