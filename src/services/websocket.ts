@@ -24,8 +24,9 @@ export const startWebsocket = (port: number) => {
 }
 
 /**
+ * Connect to all remote servers.
  *
- * @param servers
+ * @param servers Array of remote servers.
  */
 export const connectToServers = (servers: RemoteServer[]) => {
   for (const server of servers) {
@@ -34,13 +35,15 @@ export const connectToServers = (servers: RemoteServer[]) => {
 }
 
 /**
+ * Connect to a remote server.
  *
- * @param server
+ * @param server Remote server.
  */
 export const connectToServer = (server: RemoteServer) => {
   const ws = new WebSocket(`ws://${server.address}`)
   ws.onopen = () => {
     console.log('Connected to server ' + server.name)
+    ws.send('Hello! Message From Client!')
   }
 
   // Handle errors.

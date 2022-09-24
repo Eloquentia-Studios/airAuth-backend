@@ -25,7 +25,7 @@ const SyncConfiguration = z.object({
 export type SyncConfiguration = z.infer<typeof SyncConfiguration>
 
 /**
- * Initialize the sync service
+ * Initialize the sync service.
  */
 export const initSync = () => {
   const configPath = process.env.CONFIG_PATH || './config/config.json'
