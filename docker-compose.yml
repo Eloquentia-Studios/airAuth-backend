@@ -20,7 +20,8 @@ services:
       - CIPHER_IV=#hzCY@5&S#JqvDgS1
     volumes:
       - ./dist:/app/dist
-      - ./config:/app/config
+      - ./config/pems:/app/config/pems
+      - ./config/server1.config.json:/app/config/config.json
     networks:
       - airAuth1
       - airAuthServers
@@ -48,7 +49,8 @@ services:
       - CIPHER_IV=#hzCY@5&S#JqvDgS1
     volumes:
       - ./dist:/app/dist
-      - ./config:/app/config
+      - ./config/pems:/app/config/pems
+      - ./config/server2.config.json:/app/config/config.json
     networks:
       - airAuth2
       - airAuthServers
