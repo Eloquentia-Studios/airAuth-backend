@@ -8,3 +8,57 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     restart: 'always'
+    networks:
+      - airAuth1
+
+  airAuth1:
+    image: airauthserverdev:latest
+    ports:
+      - 8080:8080
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/airAuth?schema=public
+      - CIPHER_IV=#hzCY@5&S#JqvDgS1
+    volumes:
+      - ./dist:/app/dist
+      - ./config:/app/config
+    networks:
+      - airAuth1
+      - airAuthServers
+    depends_on:
+      - postgres
+
+  postgres2:
+    image: postgres:14-alpine
+    ports:
+      - 5433:5432
+    environment:
+      - POSTGRES_DB=airAuth
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    restart: 'always'
+    networks:
+      - airAuth2
+
+  airAuth2:
+    image: airauthserverdev:latest
+    ports:
+      - 8081:8080
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres2:5432/airAuth?schema=public
+      - CIPHER_IV=#hzCY@5&S#JqvDgS1
+    volumes:
+      - ./dist:/app/dist
+      - ./config:/app/config
+    networks:
+      - airAuth2
+      - airAuthServers
+    depends_on:
+      - postgres2
+
+networks:
+  airAuth1:
+    driver: bridge
+  airAuth2:
+    driver: bridge
+  airAuthServers:
+    driver: bridge
