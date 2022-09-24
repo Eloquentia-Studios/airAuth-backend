@@ -1,5 +1,5 @@
 import WebSocket, { WebSocketServer } from 'ws'
-import type { RemoteServer } from './sync.js'
+import type { RemoteServer } from '../types/SyncConfiguration'
 
 let wss: WebSocketServer | null = null
 
