@@ -1,4 +1,6 @@
 import type { Otp } from '@prisma/client'
+import type RecordHash from '../types/RecordHash.d'
+import { sha256 } from './encryption.js'
 import prisma from './prisma.js'
 
 /**
@@ -97,4 +99,25 @@ export const updateOtp = async (
   })
 
   return updatedOtp
+}
+
+/**
+ * Generate a hash for all the records of all the OTPs.
+ *
+ * @returns Array of all otp uuids and their corresponding hashes.
+ */
+export const getOtpHashes = async (): Promise<RecordHash[]> => {
+  // TODO: Generate hashes when creating and updating OTPs instead of doing it here.
+  // Get all OTP records.
+  const otps = await prisma.otp.findMany({})
+
+  // Create a record hash for each OTP.
+  const hashes = otps.map((otp) => {
+    return {
+      uuid: otp.id,
+      hash: sha256(JSON.stringify(otp))
+    }
+  })
+
+  return hashes
 }

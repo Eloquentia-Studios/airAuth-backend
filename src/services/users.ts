@@ -136,9 +136,19 @@ export const updateUser = async (
   })
 }
 
+/**
+ * Generate a hash for all the records of all the users.
+ *
+ * @returns Array of all user uuids and their corresponding hashes.
+ */
 export const getUserHashes = async (): Promise<RecordHash[]> => {
+  // TODO: Generate hashes when creating and updating users instead of doing it here.
   // Get all user data.
-  const users = await prisma.user.findMany({})
+  const users = await prisma.user.findMany({
+    include: {
+      keyPair: true
+    }
+  })
 
   // Create a record hash for each user.
   const hashes = users.map((user) => {
@@ -148,6 +158,5 @@ export const getUserHashes = async (): Promise<RecordHash[]> => {
     }
   })
 
-  console.log(hashes)
   return hashes
 }
