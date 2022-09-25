@@ -42,4 +42,5 @@ dist/**/*
 yarn.lock
 
 # Config files
-config/
+config/pems/*.key
+config/server*.config.json
