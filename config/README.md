@@ -9,7 +9,7 @@ possible are:
 
 ```json
 "sync": {
-  "enabled": true, // Enables or disables the server syncronization service. DEFAULT: false
+  "enabled": false, // Enables or disables the server syncronization service. DEFAULT: false
   "server": {
     "name": "SERVER-NAME", // Name of the local server. DEFAULT: SERVER-NAME
     "port": 7070 // Port to use for websocket server for connection between servers. DEFAULT: 7070
