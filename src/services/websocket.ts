@@ -1,9 +1,14 @@
 import WebSocket, { WebSocketServer } from 'ws'
 import type {
   ClientListenerKeys,
-  ClientListenerTypes
+  ClientListenerTypes,
+  ServerListenerKeys,
+  ServerListenerTypes
 } from '../types/ListenerTypes.d'
-import type { OverloadingWithFunction } from '../types/Overload.d'
+import type {
+  OverloadingSendMessage,
+  OverloadingWithFunction
+} from '../types/Overload.d'
 import type { RemoteServer } from '../types/SyncConfiguration'
 import type SocketListeners from './../types/SocketListeners.d'
 
@@ -21,8 +26,8 @@ const clientListeners: SocketListeners = {}
  * @param listener Callback function.
  */
 export const registerServerListener: OverloadingWithFunction<
-  ClientListenerTypes,
-  ClientListenerKeys,
+  ServerListenerTypes,
+  ServerListenerKeys,
   (ws: WebSocket, data: any) => void
 > = (
   type: string,
@@ -39,7 +44,11 @@ export const registerServerListener: OverloadingWithFunction<
  * @param event Listener event
  * @param listener Callback function.
  */
-export const registerClientListener = (
+export const registerClientListener: OverloadingWithFunction<
+  ClientListenerTypes,
+  ClientListenerKeys,
+  (ws: WebSocket, data: any) => void
+> = (
   type: string,
   event: string,
   listener: (ws: WebSocket, data: any) => void
@@ -144,4 +153,56 @@ export const connectToServer = (server: RemoteServer) => {
     invokeListeners(clientListeners, 'error', 'error', ws, null)
     console.error('Error connecting to server: ' + server.name)
   }
+}
+
+/**
+ * Send a client message to a websocket.
+ *
+ * @param ws WebSocket connection.
+ * @param type Type of message.
+ * @param event Event to trigger.
+ * @param message Message to send.
+ */
+export const sendClientMessage: OverloadingSendMessage<
+  ServerListenerTypes,
+  ServerListenerKeys
+> = (ws: WebSocket, type: string, event: string, message: any) => {
+  sendMessage(ws, type, event, message)
+}
+
+/**
+ * Send a server message to a websocket.
+ *
+ * @param ws WebSocket connection.
+ * @param type Type of message.
+ * @param event Event to trigger.
+ * @param message Message to send.
+ */
+export const sendServerMessage: OverloadingSendMessage<
+  ClientListenerTypes,
+  ClientListenerKeys
+> = (ws: WebSocket, type: string, event: string, message: any) => {
+  sendMessage(ws, type, event, message)
+}
+
+/**
+ * Send a sync message to a websocket.
+ *
+ * @param ws WebSocket connection.
+ * @param message Message to send.
+ */
+const sendMessage = (
+  ws: WebSocket,
+  type: string,
+  event: string,
+  message: any
+) => {
+  ws.send(
+    JSON.stringify({
+      type,
+      event,
+      version: '1.0',
+      message
+    })
+  )
 }

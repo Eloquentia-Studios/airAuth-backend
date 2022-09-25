@@ -4,6 +4,8 @@ import {
   connectToServers,
   registerClientListener,
   registerServerListener,
+  sendClientMessage,
+  sendServerMessage,
   startWebsocket
 } from './websocket.js'
 import type { SyncConfiguration } from '../types/SyncConfiguration'
@@ -11,6 +13,7 @@ import type RecordHashes from '../types/RecordHashes.d'
 import { syncConfiguration } from '../types/SyncConfiguration.js'
 import { getOtpHashes } from './otp.js'
 import { getUserHashes, getKeypairHashes } from './users.js'
+import type RecordHash from '../types/RecordHash.d'
 
 let configuration: SyncConfiguration
 
@@ -62,35 +65,15 @@ const setupSyncWebsocket = () => {
 }
 
 /**
- * Setup sync websocket listeners.
- */
-const setupListeners = () => {
-  registerServerListener('connection', 'open', (ws, data) =>
-    sendRecordHashes(ws)
-  )
-
-  registerClientListener('sync', 'recordHashes', (ws, data) => {
-    const hashes = data as RecordHashes
-    console.log(hashes)
-  })
-}
-
-/**
- * Send a sync message to a websocket.
+ * Get all record hashes from the database.
  *
- * @param ws WebSocket connection.
- * @param message Message to send.
+ * @returns All record hashes.
  */
-const sendSyncMessage = (ws: WebSocket, event: string, message: any) => {
-  ws.send(
-    JSON.stringify({
-      type: 'sync',
-      event,
-      version: '1.0',
-      message
-    })
-  )
-}
+const getAllRecordHashes = async (): Promise<RecordHashes> => ({
+  users: await getUserHashes(),
+  keyPairs: await getKeypairHashes(),
+  otps: await getOtpHashes()
+})
 
 /**
  * Send all records as hashes to the remote server.
@@ -99,12 +82,78 @@ const sendSyncMessage = (ws: WebSocket, event: string, message: any) => {
  */
 export const sendRecordHashes = async (ws: WebSocket) => {
   // Get all record hashes.
-  const recordHashes: RecordHashes = {
-    users: await getUserHashes(),
-    keyPairs: await getKeypairHashes(),
-    otps: await getOtpHashes()
-  }
+  const recordHashes = await getAllRecordHashes()
 
   // Send the hashes to the other sever.
-  sendSyncMessage(ws, 'recordHashes', recordHashes)
+  sendServerMessage(ws, 'sync', 'recordHashes', recordHashes)
+}
+
+/**
+ * Recieve record hashes from the remote server.
+ *
+ * @param ws Websocket.
+ * @param data Record hashes.
+ */
+const recieveRecordHashes = async (
+  ws: WebSocket,
+  remoteRecordHashes: RecordHashes
+) => {
+  const localRecordHashes = await getAllRecordHashes()
+  compareRecords(localRecordHashes.users, remoteRecordHashes.users)
+}
+
+/**
+ * Compare local and remote records.
+ *
+ * @param local Local record hashes.
+ * @param remote Remote record hashes.
+ */
+const compareRecords = (local: RecordHash[], remote: RecordHash[]) => {
+  local = [
+    { id: '1', hash: '1' },
+    { id: '2', hash: '2' },
+    { id: '3', hash: '3' }
+  ]
+  remote = [
+    { id: '1', hash: '1' },
+    { id: '2', hash: '2' },
+    { id: '3', hash: '3' }
+  ]
+
+  const localOnly = doesNotHaveRecord(local, remote)
+  const remoteOnly = doesNotHaveRecord(remote, local)
+  const mismatchHashes = differentHash(local, remote)
+
+  console.log('Local', localOnly)
+  console.log('Remote', remoteOnly)
+  console.log('Mismatch', mismatchHashes)
+}
+
+const doesNotHaveRecord = (x: RecordHash[], y: RecordHash[]) =>
+  x.filter((a) => !y.some((b) => a.id === b.id))
+
+const differentHash = (x: RecordHash[], y: RecordHash[]) =>
+  x.filter((a) => y.some((b) => a.id === b.id && a.hash !== b.hash))
+
+/**
+ * Setup sync websocket listeners.
+ */
+const setupListeners = () => {
+  setupServerListeners()
+  setupClientListeners()
+}
+
+/**
+ * Setup sync websocket server listeners.
+ */
+const setupServerListeners = () => {
+  // Send record hashes
+  registerServerListener('connection', 'open', (ws) => sendRecordHashes(ws))
+}
+
+/**
+ * Setup sync websocket client listeners.
+ */
+const setupClientListeners = () => {
+  registerClientListener('sync', 'recordHashes', recieveRecordHashes)
 }

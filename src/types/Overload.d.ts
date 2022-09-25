@@ -1,3 +1,5 @@
+import type WebSocket from 'ws'
+
 // credits goes to https://stackoverflow.com/a/50375286
 // function intersection producec - function overloads
 type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
@@ -47,6 +49,31 @@ type OverloadingWithFunction<
         [Prop in Keys]: Prop extends keyof Mappings
           ? (type: Prop, event: Mappings[Prop], listener: F) => any
           : (type: Prop) => any
+      }>
+    >
+  : never
+
+/**
+ * Now make it with (ws: WebSocket, type: string, event: string, data: any) => void
+ * and we have all possible combinations of arguments
+ * for registerServerListener and registerClientListener
+ * with all possible combinations of events
+ * and all possible combinations of types
+ */
+export type OverloadingSendMessage<
+  Mappings,
+  Keys extends string
+> = keyof Mappings extends Keys
+  ? UnionToIntersection<
+      Values<{
+        [Prop in Keys]: Prop extends keyof Mappings
+          ? (
+              ws: WebSocket,
+              type: Prop,
+              event: Mappings[Prop],
+              message: any
+            ) => any
+          : (ws: WebSocket, type: Prop) => any
       }>
     >
   : never

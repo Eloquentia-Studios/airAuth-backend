@@ -1,15 +1,14 @@
 // Client listener types
 export interface ClientListenerTypes {
-  connection: 'open' | 'close' | 'error' | 'message'
-  sync: 'ad'
+  connection: 'open'
+  sync: 'recordHashes'
 }
 
 export type ClientListenerKeys = keyof ClientListenerTypes
 
 // Server listener types
 export interface ServerListenerTypes {
-  connection: 'open' | 'close' | 'error' | 'message'
-  sync: 'ad'
+  connection: 'open' | 'error'
 }
 
-export type ServerListenerKeys = keyof ClientListenerTypes
+export type ServerListenerKeys = keyof ServerListenerTypes
