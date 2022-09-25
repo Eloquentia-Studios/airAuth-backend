@@ -1,6 +1,7 @@
 import type { User, KeyPair } from '@prisma/client'
+import type RecordHash from '../types/RecordHash.d'
 import type UserUpdates from '../types/UserUpdates.d'
-import { generateEncryptedKeyPair } from './encryption.js'
+import { generateEncryptedKeyPair, sha256 } from './encryption.js'
 import { hashPassword, verifyPassword } from './password.js'
 import prisma from './prisma.js'
 
@@ -109,6 +110,13 @@ export const deleteUser = async (id: string): Promise<User> => {
   })
 }
 
+/**
+ * Update a users data.
+ *
+ * @param id ID of the user to update.
+ * @param updates Updates to apply to the user.
+ * @returns The updated user.
+ */
 export const updateUser = async (
   id: string,
   updates: UserUpdates
@@ -126,4 +134,20 @@ export const updateUser = async (
     },
     data: updates
   })
+}
+
+export const getUserHashes = async (): Promise<RecordHash[]> => {
+  // Get all user data.
+  const users = await prisma.user.findMany({})
+
+  // Create a record hash for each user.
+  const hashes = users.map((user) => {
+    return {
+      uuid: user.id,
+      hash: sha256(JSON.stringify(user))
+    }
+  })
+
+  console.log(hashes)
+  return hashes
 }

@@ -29,9 +29,22 @@ export const initSync = () => {
     console.log('Server name: ' + configuration.server.name)
   }
 
+  // Wait for the start delay.
+  setTimeout(() => {
+    // Setup all websocket connections.
+    setupSyncWebsocket()
+  }, configuration.startDelay)
+}
+
+/**
+ * Setup the websocket server and connect to all remote servers.
+ */
+const setupSyncWebsocket = () => {
   // Start the websocket server.
   startWebsocket(configuration.server.port)
 
   // Connect to remote servers.
-  connectToServers(configuration.servers)
+  if (configuration.connectOnStart) {
+    connectToServers(configuration.servers)
+  }
 }

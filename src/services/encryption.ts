@@ -66,3 +66,13 @@ export const symmetricEncrypt = async (data: any, key: string) => {
   const auth = cipher.getAuthTag().toString('hex')
   return `${encrypted}${final} auth ${auth}`
 }
+
+/**
+ * SHA256 hash a string.
+ *
+ * @param data Data to hash.
+ * @returns SHA256 hash of the data.
+ */
+export const sha256 = (data: string) => {
+  return crypto.createHash('sha256').update(data).digest('hex')
+}
