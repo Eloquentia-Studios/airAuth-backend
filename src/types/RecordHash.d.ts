@@ -1,4 +1,4 @@
 export default interface RecordHash {
-  uuid: string
+  id: string
   hash: string
 }

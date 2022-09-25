@@ -1,6 +1,7 @@
 import type { Otp } from '@prisma/client'
+import createUpdatedPrismaObject from '../lib/createUpdatedPrismaObject.js'
+import hashObject from '../lib/hashObject.js'
 import type RecordHash from '../types/RecordHash.d'
-import { sha256 } from './encryption.js'
 import prisma from './prisma.js'
 
 /**
@@ -14,6 +15,7 @@ export const addOtp = async (url: string, ownerId: string): Promise<Otp> => {
   const otp = await prisma.otp.create({
     data: {
       url,
+      hash: hashObject({ url }),
       owner: {
         connect: {
           id: ownerId
@@ -88,13 +90,18 @@ export const updateOtp = async (
   issuer?: string | null,
   label?: string | null
 ): Promise<Otp> => {
+  const newOtpData = createUpdatedPrismaObject(await getOtp(id), {
+    issuer,
+    label
+  })
+
   const updatedOtp = await prisma.otp.update({
     where: {
       id
     },
     data: {
-      issuer,
-      label
+      ...newOtpData,
+      hash: hashObject(newOtpData)
     }
   })
 
@@ -107,17 +114,11 @@ export const updateOtp = async (
  * @returns Array of all otp uuids and their corresponding hashes.
  */
 export const getOtpHashes = async (): Promise<RecordHash[]> => {
-  // TODO: Generate hashes when creating and updating OTPs instead of doing it here.
-  // Get all OTP records.
-  const otps = await prisma.otp.findMany({})
-
-  // Create a record hash for each OTP.
-  const hashes = otps.map((otp) => {
-    return {
-      uuid: otp.id,
-      hash: sha256(JSON.stringify(otp))
+  // Get all OTP records with hashes.
+  return await prisma.otp.findMany({
+    select: {
+      id: true,
+      hash: true
     }
   })
-
-  return hashes
 }

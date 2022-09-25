@@ -1,7 +1,9 @@
 import type { User, KeyPair } from '@prisma/client'
+import createUpdatedPrismaObject from '../lib/createUpdatedPrismaObject.js'
+import hashObject from '../lib/hashObject.js'
 import type RecordHash from '../types/RecordHash.d'
 import type UserUpdates from '../types/UserUpdates.d'
-import { generateEncryptedKeyPair, sha256 } from './encryption.js'
+import { generateEncryptedKeyPair } from './encryption.js'
 import { hashPassword, verifyPassword } from './password.js'
 import prisma from './prisma.js'
 
@@ -30,16 +32,23 @@ export const createUser = async (
   // Generate a keypair for the user.
   const keypair = await generateEncryptedKeyPair(password)
 
+  // Create user object.
+  const userObj = {
+    username,
+    email,
+    phonenumber,
+    passwordHash
+  }
+
   // Create the user.
   const user = (await prisma.user.create({
     data: {
-      username,
-      email,
-      phonenumber,
-      passwordHash,
+      ...userObj,
+      hash: hashObject(userObj),
       keyPair: {
         create: {
-          ...keypair
+          ...keypair,
+          hash: hashObject(keypair)
         }
       }
     },
@@ -127,36 +136,47 @@ export const updateUser = async (
     delete updates.password
   }
 
+  // Generate the updated user data.
+  const newUserData = createUpdatedPrismaObject(await getUser(id), updates)
+
   // Update user.
   return await prisma.user.update({
     where: {
       id
     },
-    data: updates
+    data: {
+      ...newUserData,
+      hash: hashObject(newUserData)
+    }
   })
 }
 
 /**
- * Generate a hash for all the records of all the users.
+ * Get hashes for all the records of all the users.
  *
  * @returns Array of all user uuids and their corresponding hashes.
  */
 export const getUserHashes = async (): Promise<RecordHash[]> => {
-  // TODO: Generate hashes when creating and updating users instead of doing it here.
-  // Get all user data.
-  const users = await prisma.user.findMany({
-    include: {
-      keyPair: true
+  // Get all users with hashes.
+  return await prisma.user.findMany({
+    select: {
+      id: true,
+      hash: true
     }
   })
+}
 
-  // Create a record hash for each user.
-  const hashes = users.map((user) => {
-    return {
-      uuid: user.id,
-      hash: sha256(JSON.stringify(user))
+/**
+ * Get hashes for all the records of all the keypairs.
+ *
+ * @returns Array of all keypair uuids and their corresponding hashes.
+ */
+export const getKeypairHashes = async (): Promise<RecordHash[]> => {
+  // Get all keypairs with hashes.
+  return await prisma.keyPair.findMany({
+    select: {
+      id: true,
+      hash: true
     }
   })
-
-  return hashes
 }

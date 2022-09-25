@@ -2,7 +2,7 @@ import WebSocket, { WebSocketServer } from 'ws'
 import type RecordHashes from '../types/RecordHashes.d'
 import type { RemoteServer } from '../types/SyncConfiguration'
 import { getOtpHashes } from './otp.js'
-import { getUserHashes } from './users.js'
+import { getUserHashes, getKeypairHashes } from './users.js'
 
 let wss: WebSocketServer | null = null
 
@@ -36,6 +36,7 @@ export const sendRecordHashes = async (ws: WebSocket) => {
   // Get all record hashes.
   const recordHashes: RecordHashes = {
     users: await getUserHashes(),
+    keyPairs: await getKeypairHashes(),
     otps: await getOtpHashes()
   }
 
