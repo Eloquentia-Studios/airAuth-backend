@@ -1,7 +1,16 @@
 import fs from 'fs'
-import { connectToServers, startWebsocket } from './websocket.js'
+import type WebSocket from 'ws'
+import {
+  connectToServers,
+  registerClientListener,
+  registerServerListener,
+  startWebsocket
+} from './websocket.js'
 import type { SyncConfiguration } from '../types/SyncConfiguration'
+import type RecordHashes from '../types/RecordHashes.d'
 import { syncConfiguration } from '../types/SyncConfiguration.js'
+import { getOtpHashes } from './otp.js'
+import { getUserHashes, getKeypairHashes } from './users.js'
 
 let configuration: SyncConfiguration
 
@@ -40,6 +49,9 @@ export const initSync = () => {
  * Setup the websocket server and connect to all remote servers.
  */
 const setupSyncWebsocket = () => {
+  // Setup the websocket listeners.
+  setupListeners()
+
   // Start the websocket server.
   startWebsocket(configuration.server.port)
 
@@ -47,4 +59,52 @@ const setupSyncWebsocket = () => {
   if (configuration.connectOnStart) {
     connectToServers(configuration.servers)
   }
+}
+
+/**
+ * Setup sync websocket listeners.
+ */
+const setupListeners = () => {
+  registerServerListener('connection', 'open', (ws, data) =>
+    sendRecordHashes(ws)
+  )
+
+  registerClientListener('sync', 'recordHashes', (ws, data) => {
+    const hashes = data as RecordHashes
+    console.log(hashes)
+  })
+}
+
+/**
+ * Send a sync message to a websocket.
+ *
+ * @param ws WebSocket connection.
+ * @param message Message to send.
+ */
+const sendSyncMessage = (ws: WebSocket, event: string, message: any) => {
+  ws.send(
+    JSON.stringify({
+      type: 'sync',
+      event,
+      version: '1.0',
+      message
+    })
+  )
+}
+
+/**
+ * Send all records as hashes to the remote server.
+ *
+ * @param ws Websocket to send the message via.
+ */
+export const sendRecordHashes = async (ws: WebSocket) => {
+  // Get all record hashes.
+  const recordHashes: RecordHashes = {
+    users: await getUserHashes(),
+    keyPairs: await getKeypairHashes(),
+    otps: await getOtpHashes()
+  }
+
+  // Send the hashes to the other sever.
+  sendSyncMessage(ws, 'recordHashes', recordHashes)
 }
