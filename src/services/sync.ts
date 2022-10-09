@@ -47,6 +47,28 @@ export const initSync = () => {
 }
 
 /**
+ * Send all records as hashes to the remote server.
+ *
+ * @param ws Websocket to send the message via.
+ */
+export const sendRecordHashes = async (ws: WebSocket) => {
+  // Get all record hashes.
+  const recordHashes = await getAllRecordHashes()
+
+  // Send the hashes to the other sever.
+  sendMessage(ws, 'sync', 'recordHashes', recordHashes)
+}
+
+/**
+ * Get server information.
+ *
+ * @returns Server name.
+ */
+export const getServerInfo = () => ({
+  name: configuration.server.name
+})
+
+/**
  * Setup the websocket server and connect to all remote servers.
  */
 const setupSyncWebsocket = () => {
@@ -74,19 +96,6 @@ const getAllRecordHashes = async (): Promise<RecordHashes> => ({
 })
 
 /**
- * Send all records as hashes to the remote server.
- *
- * @param ws Websocket to send the message via.
- */
-export const sendRecordHashes = async (ws: WebSocket) => {
-  // Get all record hashes.
-  const recordHashes = await getAllRecordHashes()
-
-  // Send the hashes to the other sever.
-  sendMessage(ws, 'sync', 'recordHashes', recordHashes)
-}
-
-/**
  * Recieve record hashes from the remote server.
  *
  * @param ws Websocket.
@@ -96,8 +105,31 @@ const recieveRecordHashes = async (
   ws: WebSocket,
   remoteRecordHashes: RecordHashes
 ) => {
+  // Compare remote and local record hashes.
   const localRecordHashes = await getAllRecordHashes()
-  compareRecords(localRecordHashes.users, remoteRecordHashes.users)
+  const mismatchingUserRecords = compareRecords(
+    localRecordHashes.users,
+    remoteRecordHashes.users,
+    ws
+  )
+  const mismatchingKeyPairRecords = compareRecords(
+    localRecordHashes.keyPairs,
+    remoteRecordHashes.keyPairs,
+    ws
+  )
+  const mismatchingOtpRecords = compareRecords(
+    localRecordHashes.otps,
+    remoteRecordHashes.otps,
+    ws
+  )
+
+  // Send mismatching records to the other server.
+  const payload = {
+    users: mismatchingUserRecords,
+    keyPairs: mismatchingKeyPairRecords,
+    otps: mismatchingOtpRecords
+  }
+  sendMessage(ws, 'sync', 'mismatchingRecords', payload)
 }
 
 /**
@@ -106,21 +138,41 @@ const recieveRecordHashes = async (
  * @param local Local record hashes.
  * @param remote Remote record hashes.
  */
-const compareRecords = (local: RecordHash[], remote: RecordHash[]) => {
-  local = [
-    { id: '1', hash: '1' },
-    { id: '2', hash: '2' },
-    { id: '3', hash: '3' }
-  ]
-  remote = [
-    { id: '1', hash: '1' },
-    { id: '2', hash: '2' },
-    { id: '3', hash: '3' }
-  ]
+const compareRecords = (
+  local: RecordHash[],
+  remote: RecordHash[],
+  ws: WebSocket
+) => {
+  return {
+    localOnly: getMissingRecords(local, remote),
+    remoteOnly: getMissingRecords(remote, local),
+    mismatchHashes: differentHash(local, remote)
+  }
+}
 
-  const localOnly = doesNotHaveRecord(local, remote)
-  const remoteOnly = doesNotHaveRecord(remote, local)
-  const mismatchHashes = differentHash(local, remote)
+const handleMismatchingRecords = (
+  ws: WebSocket,
+  payload: {
+    users: {
+      localOnly: RecordHash[]
+      remoteOnly: RecordHash[]
+      mismatchHashes: RecordHash[]
+    }
+    keyPairs: {
+      localOnly: RecordHash[]
+      remoteOnly: RecordHash[]
+      mismatchHashes: RecordHash[]
+    }
+    otps: {
+      localOnly: RecordHash[]
+      remoteOnly: RecordHash[]
+      mismatchHashes: RecordHash[]
+    }
+  }
+) => {
+  console.log('Users:', payload.users)
+  console.log('Key pairs:', payload.keyPairs)
+  console.log('OTPs:', payload.otps)
 }
 
 /**
@@ -130,7 +182,7 @@ const compareRecords = (local: RecordHash[], remote: RecordHash[]) => {
  * @param y List of record hashes to compare against.
  * @returns List of record hashes that are not y.
  */
-const doesNotHaveRecord = (x: RecordHash[], y: RecordHash[]) =>
+const getMissingRecords = (x: RecordHash[], y: RecordHash[]) =>
   x.filter((a) => !y.some((b) => a.id === b.id))
 
 /**
@@ -144,19 +196,11 @@ const differentHash = (x: RecordHash[], y: RecordHash[]) =>
   x.filter((a) => y.some((b) => a.id === b.id && a.hash !== b.hash))
 
 /**
- * Get server information.
- *
- * @returns Server name.
- */
-export const getServerInfo = () => ({
-  name: configuration.server.name
-})
-
-/**
  * Setup sync websocket listeners.
  */
 const setupListeners = () => {
   // Send & listen for record hashes
-  registerListener('connection', 'open', (ws) => sendRecordHashes(ws))
+  registerListener('connection', 'open', sendRecordHashes)
   registerListener('sync', 'recordHashes', recieveRecordHashes)
+  registerListener('sync', 'mismatchingRecords', handleMismatchingRecords)
 }

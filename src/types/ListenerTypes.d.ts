@@ -1,7 +1,7 @@
 // Listener types
 export interface ListenerTypes {
   connection: 'open' | 'error' | 'connection-info'
-  sync: 'recordHashes'
+  sync: 'recordHashes' | 'mismatchingRecords'
 }
 
 export type ListenerKeys = keyof ListenerTypes
