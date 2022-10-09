@@ -8,7 +8,7 @@ import {
 } from './websocket.js'
 import type { SyncConfiguration } from '../types/SyncConfiguration'
 import { syncConfiguration } from '../types/SyncConfiguration.js'
-import { getAllRecordHashes, getRecord } from './prisma.js'
+import { applyRecords, getAllRecordHashes, getRecord } from './prisma.js'
 import arraysAreEqual from '../lib/arraysAreEqual.js'
 import type {
   RecordComparison,
@@ -145,7 +145,7 @@ const getMismatchingRecords = async (
   const localHashes = localRecordHashes[tableName]
   const remoteHashes = remoteRecordHashes[tableName]
   if (!localHashes || !remoteHashes) throw new Error('Invalid table name')
-  const mismatchingRecords = await compareRecords(
+  const mismatchingRecords = await compareAndPopulateRecords(
     localHashes,
     remoteHashes,
     tableName
@@ -159,7 +159,7 @@ const getMismatchingRecords = async (
  * @param local Local record hashes.
  * @param remote Remote record hashes.
  */
-const compareRecords = async (
+const compareAndPopulateRecords = async (
   local: RecordHash[],
   remote: RecordHash[],
   tableName: TableNames
@@ -177,6 +177,13 @@ const compareRecords = async (
   }
 }
 
+/**
+ * Populate records with their data.
+ *
+ * @param records Records to populate.
+ * @param tableName Table name.
+ * @returns Populated records.
+ */
 const populateRecords = async (
   records: RecordHash[],
   tableName: TableNames
@@ -197,14 +204,24 @@ const populateRecords = async (
  * @param ws Websocket.
  * @param payload Mismatching records.
  */
-const handleMismatchingRecords = (
+const handleMismatchingRecords = async (
   ws: WebSocket,
   payload: RecordComparisons
 ) => {
-  Object.keys(payload).forEach((tableName) => {
-    // @ts-ignore
-    console.log(tableName, payload[tableName])
-  })
+  // NOTE: Local is what the other server has, remote is what we have!
+  const tables = Object.keys(payload) as TableNamesList
+  await Promise.all(
+    tables.map(async (tableName) => {
+      // Apply all local records.
+      const localRecords = payload[tableName]?.localOnly
+      if (!localRecords) throw new Error('Invalid local only records!')
+      await applyRecords(tableName, localRecords)
+
+      // Check update time of mismatching records.
+
+      // Send mismatching and remote records to the other server.
+    })
+  )
 }
 
 /**
