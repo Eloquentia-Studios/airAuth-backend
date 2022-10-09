@@ -4,7 +4,7 @@ import type { TableNames } from './RecordHash.d'
 
 export interface RecordComparison {
   localOnly: DatabaseRecord[]
-  remoteOnly: RecordHash[]
+  remoteOnly: RecordHash[] | DatabaseRecord[]
   mismatchHashes: DatabaseRecord[]
 }
 

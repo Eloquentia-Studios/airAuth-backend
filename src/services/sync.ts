@@ -222,7 +222,8 @@ const handleMismatchingRecords = async (
     })
   )
 
-  console.log(toSend)
+  // Send the records to the other server.
+  sendMessage(ws, 'sync', 'newerRecords', toSend)
 }
 
 /**
@@ -265,6 +266,29 @@ const applyAndCompareRemoteRecords = async (
     mismatchHashes: newerRemote,
     remoteOnly
   }
+}
+
+/**
+ * Apply records that are newer on the remote server.
+ *
+ * @param ws Websocket connection.
+ * @param payload Newer records from remote server.
+ */
+const applyNewerRecords = async (ws: WebSocket, payload: RecordComparisons) => {
+  const tables = Object.keys(payload) as TableNamesList
+  await Promise.all(
+    tables.map(async (tableName) => {
+      // Apply mismatching remote records.
+      const mismatchingRecords = payload[tableName]?.mismatchHashes
+      if (!mismatchingRecords) throw new Error('Invalid mismatching records')
+      await applyRecords(tableName, mismatchingRecords)
+
+      // Apply remote only records.
+      const remoteOnlyRecords = payload[tableName]?.remoteOnly
+      if (!remoteOnlyRecords) throw new Error('Invalid remote only records')
+      await applyRecords(tableName, remoteOnlyRecords as DatabaseRecord[])
+    })
+  )
 }
 
 /**
@@ -386,4 +410,5 @@ const setupListeners = () => {
   registerListener('connection', 'established', sendRecordHashes)
   registerListener('sync', 'recordHashes', recieveRecordHashes)
   registerListener('sync', 'mismatchingRecords', handleMismatchingRecords)
+  registerListener('sync', 'newerRecords', applyNewerRecords)
 }
