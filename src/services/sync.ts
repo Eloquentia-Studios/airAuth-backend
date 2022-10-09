@@ -2,10 +2,8 @@ import fs from 'fs'
 import type WebSocket from 'ws'
 import {
   connectToServers,
-  registerClientListener,
-  registerServerListener,
-  sendClientMessage,
-  sendServerMessage,
+  registerListener,
+  sendMessage,
   startWebsocket
 } from './websocket.js'
 import type { SyncConfiguration } from '../types/SyncConfiguration'
@@ -85,7 +83,7 @@ export const sendRecordHashes = async (ws: WebSocket) => {
   const recordHashes = await getAllRecordHashes()
 
   // Send the hashes to the other sever.
-  sendServerMessage(ws, 'sync', 'recordHashes', recordHashes)
+  sendMessage(ws, 'sync', 'recordHashes', recordHashes)
 }
 
 /**
@@ -123,37 +121,42 @@ const compareRecords = (local: RecordHash[], remote: RecordHash[]) => {
   const localOnly = doesNotHaveRecord(local, remote)
   const remoteOnly = doesNotHaveRecord(remote, local)
   const mismatchHashes = differentHash(local, remote)
-
-  console.log('Local', localOnly)
-  console.log('Remote', remoteOnly)
-  console.log('Mismatch', mismatchHashes)
 }
 
+/**
+ * Compare two lists of record hashes and return the records that are not in the other list.
+ *
+ * @param x List of record hashes.
+ * @param y List of record hashes to compare against.
+ * @returns List of record hashes that are not y.
+ */
 const doesNotHaveRecord = (x: RecordHash[], y: RecordHash[]) =>
   x.filter((a) => !y.some((b) => a.id === b.id))
 
+/**
+ * Compare two lists of record hashes and return the records that have different hashes.
+ *
+ * @param x List of record hashes.
+ * @param y List of record hashes to compare against.
+ * @returns List of record hashes that have different hashes.
+ */
 const differentHash = (x: RecordHash[], y: RecordHash[]) =>
   x.filter((a) => y.some((b) => a.id === b.id && a.hash !== b.hash))
+
+/**
+ * Get server information.
+ *
+ * @returns Server name.
+ */
+export const getServerInfo = () => ({
+  name: configuration.server.name
+})
 
 /**
  * Setup sync websocket listeners.
  */
 const setupListeners = () => {
-  setupServerListeners()
-  setupClientListeners()
-}
-
-/**
- * Setup sync websocket server listeners.
- */
-const setupServerListeners = () => {
-  // Send record hashes
-  registerServerListener('connection', 'open', (ws) => sendRecordHashes(ws))
-}
-
-/**
- * Setup sync websocket client listeners.
- */
-const setupClientListeners = () => {
-  registerClientListener('sync', 'recordHashes', recieveRecordHashes)
+  // Send & listen for record hashes
+  registerListener('connection', 'open', (ws) => sendRecordHashes(ws))
+  registerListener('sync', 'recordHashes', recieveRecordHashes)
 }
