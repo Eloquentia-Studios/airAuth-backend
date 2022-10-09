@@ -121,10 +121,6 @@ const compareRecords = (local: RecordHash[], remote: RecordHash[]) => {
   const localOnly = doesNotHaveRecord(local, remote)
   const remoteOnly = doesNotHaveRecord(remote, local)
   const mismatchHashes = differentHash(local, remote)
-
-  //console.log('Local', localOnly)
-  //console.log('Remote', remoteOnly)
-  //console.log('Mismatch', mismatchHashes)
 }
 
 /**
