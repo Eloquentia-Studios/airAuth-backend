@@ -7,6 +7,7 @@ import type {
 import type { RemoteServer } from '../types/SyncConfiguration'
 import type SocketListeners from './../types/SocketListeners.d'
 import { getServerInfo } from './sync.js'
+import { v4 as uuid } from 'uuid'
 
 // Websocket server and connections.
 let wss: WebSocketServer | null = null
@@ -32,7 +33,7 @@ export const registerListener: OverloadingWithFunction<
   event: string,
   listener: (ws: WebSocket, data: any) => void
 ) => {
-  const id = Math.random().toString(36).substring(2, 9)
+  const id = uuid()
   if (!socketListeners[type]) socketListeners[type] = {}
   if (!socketListeners[type][event]) socketListeners[type][event] = {}
   socketListeners[type][event][id] = listener
