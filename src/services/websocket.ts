@@ -84,7 +84,7 @@ export const startWebsocket = (port: number) => {
   wss = new WebSocketServer({ port })
   wss.on('connection', (ws) => {
     sendMessage(ws, 'connection', 'connection-info', getServerInfo())
-    listenForServerInfo(ws, true)
+    listenForServerInfo(ws)
     listenForMessages(ws)
   })
 
@@ -131,7 +131,7 @@ export const connectToServer = (server: RemoteServer) => {
  */
 const addConnection = (name: string, ws: WebSocket) => {
   // Check if the connection already exists.
-  if (!connections.has(name)) {
+  if (!connections.has(name) || connections.get(name)?.readyState !== ws.OPEN) {
     // Add the connection.
     connections.set(name, ws)
 
