@@ -26,6 +26,7 @@ import type {
   TableNamesList
 } from '../types/RecordHash.js'
 import DatabaseRecord from './../types/DatabaseRecord.d'
+import { setDbWritesPaused } from './pauseTraffic.js'
 
 let configuration: SyncConfiguration
 
@@ -66,6 +67,9 @@ export const initSync = () => {
  * @param ws Websocket to send the message via.
  */
 export const sendRecordHashes = async (ws: WebSocket) => {
+  // Pause writes to the database.
+  setDbWritesPaused(true)
+
   // Get all record hashes.
   const recordHashes = await getAllRecordHashes()
 
@@ -108,6 +112,9 @@ const recieveRecordHashes = async (
   ws: WebSocket,
   remoteRecordHashes: RecordHashes
 ) => {
+  // Pause writes to the database.
+  setDbWritesPaused(true)
+
   // Compare remote and local tables.
   const localRecordHashes = await getAllRecordHashes()
   const remoteTableNames = Object.keys(remoteRecordHashes) as TableNamesList
@@ -289,6 +296,12 @@ const applyNewerRecords = async (ws: WebSocket, payload: RecordComparisons) => {
       await applyRecords(tableName, remoteOnlyRecords as DatabaseRecord[])
     })
   )
+
+  // Send success message.
+  sendMessage(ws, 'sync', 'newerApplied', true)
+
+  // Unpause writes to the database.
+  setDbWritesPaused(false)
 }
 
 /**
@@ -365,6 +378,21 @@ const getMismatchingRemoteRecords = async (
 }
 
 /**
+ * Handle newer records response status.
+ *
+ * @param ws Websocket connection.
+ * @param success Success.
+ */
+const handleNewerRecordsResponse = async (ws: WebSocket, success: boolean) => {
+  if (success) {
+    // Unpause writes to the database.
+    setDbWritesPaused(false)
+  } else {
+    throw new Error('Remote server failed to apply newer records!')
+  }
+}
+
+/**
  * Check which records are newer.
  *
  * @param recordsA Records A.
@@ -411,4 +439,5 @@ const setupListeners = () => {
   registerListener('sync', 'recordHashes', recieveRecordHashes)
   registerListener('sync', 'mismatchingRecords', handleMismatchingRecords)
   registerListener('sync', 'newerRecords', applyNewerRecords)
+  registerListener('sync', 'newerApplied', handleNewerRecordsResponse)
 }

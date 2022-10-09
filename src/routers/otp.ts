@@ -6,11 +6,12 @@ import { isOtpOwner } from '../middlewares/isOtpOwner.js'
 import { internalServerErrorResponse } from '../lib/internalServerErrorResponse.js'
 import createResponseError from '../lib/createResponseError.js'
 import HttpError from '../enums/HttpError.js'
+import dbWritesPrevented from '../middlewares/dbWritesPrevented.js'
 
 const otpRouter = Router()
 
 // Handle POST /api/v1/otp requests to add a new OTP.
-otpRouter.post('/', isAuthenticated, async (req, res) => {
+otpRouter.post('/', isAuthenticated, dbWritesPrevented, async (req, res) => {
   try {
     const { otpurl } = req.body
 
@@ -46,42 +47,54 @@ otpRouter.get('/', isAuthenticated, async (req, res) => {
 })
 
 // Handle DELETE /api/v1/otp/:id requests to delete an OTP.
-otpRouter.delete('/:id', isAuthenticated, isOtpOwner, async (req, res) => {
-  try {
-    // Delete the OTP.
-    const deletedOtp = await deleteOtp(req.params.id)
+otpRouter.delete(
+  '/:id',
+  isAuthenticated,
+  isOtpOwner,
+  dbWritesPrevented,
+  async (req, res) => {
+    try {
+      // Delete the OTP.
+      const deletedOtp = await deleteOtp(req.params.id)
 
-    // Return the deleted OTP.
-    res.status(200).json({ id: deletedOtp.id, otpurl: deletedOtp.url })
-  } catch (error) {
-    internalServerErrorResponse(error, res)
+      // Return the deleted OTP.
+      res.status(200).json({ id: deletedOtp.id, otpurl: deletedOtp.url })
+    } catch (error) {
+      internalServerErrorResponse(error, res)
+    }
   }
-})
+)
 
 // Handle POST /api/v1/otp/:id requests to set custom issuer and label.
-otpRouter.post('/:id', isAuthenticated, isOtpOwner, async (req, res) => {
-  try {
-    const { issuer, label } = req.body
+otpRouter.post(
+  '/:id',
+  isAuthenticated,
+  isOtpOwner,
+  dbWritesPrevented,
+  async (req, res) => {
+    try {
+      const { issuer, label } = req.body
 
-    const errors = []
+      const errors = []
 
-    if (!isString(issuer) && issuer !== null && issuer !== undefined)
-      errors.push('Issuer must be a string, if provided.')
-    if (!isString(label) && label !== null && label !== undefined)
-      errors.push('Label must be a string, if provided.')
+      if (!isString(issuer) && issuer !== null && issuer !== undefined)
+        errors.push('Issuer must be a string, if provided.')
+      if (!isString(label) && label !== null && label !== undefined)
+        errors.push('Label must be a string, if provided.')
 
-    if (errors.length > 0)
-      return res
-        .status(400)
-        .json(createResponseError(HttpError.BadRequest, errors))
+      if (errors.length > 0)
+        return res
+          .status(400)
+          .json(createResponseError(HttpError.BadRequest, errors))
 
-    // Update the OTP.
-    await updateOtp(req.params.id, issuer, label)
+      // Update the OTP.
+      await updateOtp(req.params.id, issuer, label)
 
-    res.status(200).json({ message: 'Success' })
-  } catch (error) {
-    internalServerErrorResponse(error, res)
+      res.status(200).json({ message: 'Success' })
+    } catch (error) {
+      internalServerErrorResponse(error, res)
+    }
   }
-})
+)
 
 export default otpRouter
