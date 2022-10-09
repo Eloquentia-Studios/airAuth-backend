@@ -1,6 +1,8 @@
 import WebSocket, { WebSocketServer } from 'ws'
 import type { ListenerKeys, ListenerTypes } from '../types/ListenerTypes.d'
 import type {
+  Overloading,
+  OverloadingInvokeListener,
   OverloadingSendMessage,
   OverloadingWithFunction
 } from '../types/Overload.d'
@@ -63,12 +65,10 @@ export const removeListener = (id: string) => {
  * @param ws WebSocket connection.
  * @param data Data to send.
  */
-const invokeListeners = (
-  type: string,
-  event: string,
-  ws: WebSocket,
-  data: any
-) => {
+const invokeListeners: OverloadingInvokeListener<
+  ListenerTypes,
+  ListenerKeys
+> = (type: string, event: string, ws: WebSocket, data: any) => {
   // TODO: Add type checking for the parameters.
   if (socketListeners[type] && socketListeners[type][event]) {
     const ids = Object.keys(socketListeners[type][event])
@@ -114,7 +114,11 @@ export const connectToServer = (server: RemoteServer) => {
   const ws = new WebSocket(`ws://${server.address}`)
 
   // Handle connection open.
-  ws.onopen = () => checkAndAddConnection(server.name, ws)
+  ws.onopen = () => {
+    if (checkAndAddConnection(server.name, ws)) {
+      invokeListeners('connection', 'established', ws, null)
+    }
+  }
 
   // Handle errors.
   ws.onerror = () => {
@@ -183,7 +187,7 @@ const listenForMessages = (ws: WebSocket) => {
  */
 const listenForErrors = (ws: WebSocket) => {
   ws.onerror = (event) => {
-    invokeListeners('error', 'error', ws, event)
+    invokeListeners('connection', 'error', ws, event)
     console.error('Error on websocket connection:', event)
   }
 }

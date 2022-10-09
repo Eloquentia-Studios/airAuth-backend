@@ -8,7 +8,7 @@ import {
 } from './websocket.js'
 import type { SyncConfiguration } from '../types/SyncConfiguration'
 import { syncConfiguration } from '../types/SyncConfiguration.js'
-import { getAllRecordHashes } from './prisma.js'
+import { getAllRecordHashes, getRecord } from './prisma.js'
 import arraysAreEqual from '../lib/arraysAreEqual.js'
 import type {
   RecordComparison,
@@ -20,7 +20,7 @@ import type {
   TableNames,
   TableNamesList
 } from '../types/RecordHash.js'
-import { Console } from 'console'
+import DatabaseRecord from './../types/DatabaseRecord.d'
 
 let configuration: SyncConfiguration
 
@@ -145,7 +145,11 @@ const getMismatchingRecords = async (
   const localHashes = localRecordHashes[tableName]
   const remoteHashes = remoteRecordHashes[tableName]
   if (!localHashes || !remoteHashes) throw new Error('Invalid table name')
-  const mismatchingRecords = await compareRecords(localHashes, remoteHashes)
+  const mismatchingRecords = await compareRecords(
+    localHashes,
+    remoteHashes,
+    tableName
+  )
   mismatchingHashes[tableName] = mismatchingRecords
 }
 
@@ -157,13 +161,34 @@ const getMismatchingRecords = async (
  */
 const compareRecords = async (
   local: RecordHash[],
-  remote: RecordHash[]
+  remote: RecordHash[],
+  tableName: TableNames
 ): Promise<RecordComparison> => {
   return {
-    localOnly: getMissingRecords(local, remote),
+    localOnly: await populateRecords(
+      getMissingRecords(local, remote),
+      tableName
+    ),
     remoteOnly: getMissingRecords(remote, local),
-    mismatchHashes: differentHash(local, remote)
+    mismatchHashes: await populateRecords(
+      differentHash(local, remote),
+      tableName
+    )
   }
+}
+
+const populateRecords = async (
+  records: RecordHash[],
+  tableName: TableNames
+): Promise<DatabaseRecord[]> => {
+  const populatedRecords: DatabaseRecord[] = []
+  await Promise.all(
+    records.map(async (record) => {
+      const populatedRecord = await getRecord(tableName, record.id)
+      populatedRecords.push(populatedRecord)
+    })
+  )
+  return populatedRecords
 }
 
 /**
@@ -176,7 +201,10 @@ const handleMismatchingRecords = (
   ws: WebSocket,
   payload: RecordComparisons
 ) => {
-  // TODO: Handle mismatching records.
+  Object.keys(payload).forEach((tableName) => {
+    // @ts-ignore
+    console.log(tableName, payload[tableName])
+  })
 }
 
 /**
@@ -204,7 +232,7 @@ const differentHash = (x: RecordHash[], y: RecordHash[]) =>
  */
 const setupListeners = () => {
   // Send & listen for record hashes
-  registerListener('connection', 'open', sendRecordHashes)
+  registerListener('connection', 'established', sendRecordHashes)
   registerListener('sync', 'recordHashes', recieveRecordHashes)
   registerListener('sync', 'mismatchingRecords', handleMismatchingRecords)
 }

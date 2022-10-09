@@ -1,6 +1,7 @@
 import Prisma from '@prisma/client'
-import type { RecordHashes } from '../types/RecordHash.d'
+import type { RecordHashes, TableNames } from '../types/RecordHash.d'
 import type { TableNamesList } from '../types/RecordHash.d'
+import type DatabaseRecord from '../types/DatabaseRecord.d'
 
 const prisma = new Prisma.PrismaClient()
 export default prisma
@@ -25,6 +26,23 @@ export const getAllRecordHashes = async () => {
     })
   )
   return recordHashes
+}
+
+/**
+ * Get record from a table.
+ *
+ * @param tableName Table name.
+ * @param id Record ID.
+ * @returns Record data.
+ */
+export const getRecord = async (
+  tableName: TableNames,
+  id: string
+): Promise<DatabaseRecord> => {
+  // @ts-ignore - Prisma model names are dynamic.
+  return await prisma[tableName].findUnique({
+    where: { id }
+  })
 }
 
 let modelNames: TableNamesList = []
