@@ -1,60 +1,19 @@
 import WebSocket, { WebSocketServer } from 'ws'
-import type {
-  ClientListenerKeys,
-  ClientListenerTypes,
-  ServerListenerKeys,
-  ServerListenerTypes
-} from '../types/ListenerTypes.d'
+import type { ListenerKeys, ListenerTypes } from '../types/ListenerTypes.d'
 import type {
   OverloadingSendMessage,
   OverloadingWithFunction
 } from '../types/Overload.d'
 import type { RemoteServer } from '../types/SyncConfiguration'
 import type SocketListeners from './../types/SocketListeners.d'
+import { getServerInfo } from './sync.js'
 
+// Websocket server and connections.
 let wss: WebSocketServer | null = null
+const connections = new Map<string, WebSocket>()
 
 // Event listeners for websocket connections.
-const serverListeners: SocketListeners = {}
-const clientListeners: SocketListeners = {}
-
-/**
- * Register a listener for a websocket server event.
- *
- * @param type Listener type.
- * @param event Listener event
- * @param listener Callback function.
- */
-export const registerServerListener: OverloadingWithFunction<
-  ServerListenerTypes,
-  ServerListenerKeys,
-  (ws: WebSocket, data: any) => void
-> = (
-  type: string,
-  event: string,
-  listener: (ws: WebSocket, data: any) => void
-) => {
-  registerListener(serverListeners, type, event, listener)
-}
-
-/**
- * Register a listener for a websocket client event.
- *
- * @param type Listener type.
- * @param event Listener event
- * @param listener Callback function.
- */
-export const registerClientListener: OverloadingWithFunction<
-  ClientListenerTypes,
-  ClientListenerKeys,
-  (ws: WebSocket, data: any) => void
-> = (
-  type: string,
-  event: string,
-  listener: (ws: WebSocket, data: any) => void
-) => {
-  registerListener(clientListeners, type, event, listener)
-}
+const socketListeners: SocketListeners = {}
 
 /**
  * Register a listener for a websocket event.
@@ -64,15 +23,34 @@ export const registerClientListener: OverloadingWithFunction<
  * @param event Listener event
  * @param listener Callback function.
  */
-const registerListener = (
-  listeners: SocketListeners,
+export const registerListener: OverloadingWithFunction<
+  ListenerTypes,
+  ListenerKeys,
+  (ws: WebSocket, data: any) => void
+> = (
   type: string,
   event: string,
   listener: (ws: WebSocket, data: any) => void
 ) => {
-  if (!listeners[type]) listeners[type] = {}
-  if (!listeners[type][event]) listeners[type][event] = []
-  listeners[type][event].push(listener)
+  const id = Math.random().toString(36).substring(2, 9)
+  if (!socketListeners[type]) socketListeners[type] = {}
+  if (!socketListeners[type][event]) socketListeners[type][event] = {}
+  socketListeners[type][event][id] = listener
+}
+
+/**
+ * Remove a listener from the listeners object.
+ *
+ * @param id Id of the listener.
+ */
+export const removeListener = (id: string) => {
+  for (const type in socketListeners) {
+    for (const event in socketListeners[type]) {
+      if (socketListeners[type][event][id]) {
+        delete socketListeners[type][event][id]
+      }
+    }
+  }
 }
 
 /**
@@ -85,14 +63,15 @@ const registerListener = (
  * @param data Data to send.
  */
 const invokeListeners = (
-  listeners: SocketListeners,
   type: string,
   event: string,
   ws: WebSocket,
   data: any
 ) => {
-  if (listeners[type] && listeners[type][event]) {
-    listeners[type][event].forEach((listener) => listener(ws, data))
+  // TODO: Add type checking for the parameters.
+  if (socketListeners[type] && socketListeners[type][event]) {
+    const ids = Object.keys(socketListeners[type][event])
+    ids.forEach((id) => socketListeners[type][event][id](ws, data))
   }
 }
 
@@ -103,13 +82,10 @@ const invokeListeners = (
  */
 export const startWebsocket = (port: number) => {
   wss = new WebSocketServer({ port })
-  wss.on('connection', async (ws) => {
-    ws.on('message', (message) => {
-      const data = JSON.parse(message.toString())
-      invokeListeners(serverListeners, data.type, data.event, ws, data.message)
-    })
-
-    invokeListeners(serverListeners, 'connection', 'open', ws, null)
+  wss.on('connection', (ws) => {
+    sendMessage(ws, 'connection', 'connection-info', getServerInfo())
+    listenForServerInfo(ws, true)
+    listenForMessages(ws)
   })
 
   wss.on('listening', () => {
@@ -137,66 +113,101 @@ export const connectToServer = (server: RemoteServer) => {
   const ws = new WebSocket(`ws://${server.address}`)
 
   // Handle connection open.
-  ws.onopen = () => {
-    invokeListeners(clientListeners, 'connection', 'open', ws, null)
-    console.log('Connected to server ' + server.name)
-  }
-
-  // Handle messages from the server.
-  ws.onmessage = (event) => {
-    const data = JSON.parse(event.data.toString())
-    invokeListeners(clientListeners, data.type, data.event, ws, data.message)
-  }
+  ws.onopen = () => addConnection(server.name, ws)
 
   // Handle errors.
   ws.onerror = () => {
-    invokeListeners(clientListeners, 'error', 'error', ws, null)
-    console.error('Error connecting to server: ' + server.name)
+    invokeListeners('connection', 'error', ws, server)
+    console.log('Unable to connect to server:', server.name)
   }
 }
 
 /**
- * Send a client message to a websocket.
+ * Add a new socket connection.
  *
+ * @param name Name of the connection.
  * @param ws WebSocket connection.
- * @param type Type of message.
- * @param event Event to trigger.
- * @param message Message to send.
+ * @returns True if the connection was added, false if it already exists.
  */
-export const sendClientMessage: OverloadingSendMessage<
-  ServerListenerTypes,
-  ServerListenerKeys
-> = (ws: WebSocket, type: string, event: string, message: any) => {
-  sendMessage(ws, type, event, message)
+const addConnection = (name: string, ws: WebSocket) => {
+  // Check if the connection already exists.
+  if (!connections.has(name)) {
+    // Add the connection.
+    connections.set(name, ws)
+
+    // Listen for events.
+    listenForServerInfo(ws, false)
+    listenForMessages(ws)
+    listenForErrors(ws)
+
+    // Invoke the connection event.
+    invokeListeners('connection', 'open', ws, null)
+
+    console.log('Connected to server:', name)
+    return true
+  }
+
+  // Connection already exists.
+  sendMessage(ws, 'connection', 'error', 'Already connected to server.')
+  ws.close()
+  return false
 }
 
 /**
- * Send a server message to a websocket.
+ * Listen for messages on a websocket connection.
  *
  * @param ws WebSocket connection.
- * @param type Type of message.
- * @param event Event to trigger.
- * @param message Message to send.
  */
-export const sendServerMessage: OverloadingSendMessage<
-  ClientListenerTypes,
-  ClientListenerKeys
-> = (ws: WebSocket, type: string, event: string, message: any) => {
-  sendMessage(ws, type, event, message)
+const listenForMessages = (ws: WebSocket) => {
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data.toString())
+    invokeListeners(data.type, data.event, ws, data.message)
+  }
 }
 
 /**
- * Send a sync message to a websocket.
+ * Listen for errors on a websocket connection.
+ *
+ * @param ws WebSocket connection.
+ */
+const listenForErrors = (ws: WebSocket) => {
+  ws.onerror = (event) => {
+    invokeListeners('error', 'error', ws, event)
+    console.error('Error on websocket connection:', event)
+  }
+}
+
+/**
+ * Listen for the server information.
+ *
+ * @param ws WebSocket connection.
+ * @param server True if the connection is to a server, false if it is from a client.
+ */
+const listenForServerInfo = (ws: WebSocket, server = true) => {
+  const listener = registerListener(
+    'connection',
+    'connection-info',
+    (ws, data) => {
+      console.log('Connection info:', data)
+      if (ws === ws && data?.name) {
+        if (server) addConnection(data.name, ws)
+        else sendMessage(ws, 'connection', 'connection-info', getServerInfo())
+        removeListener(listener)
+      }
+    }
+  )
+}
+
+/**
+ * Send an event to a websocket.
  *
  * @param ws WebSocket connection.
  * @param message Message to send.
  */
-const sendMessage = (
-  ws: WebSocket,
-  type: string,
-  event: string,
-  message: any
-) => {
+export const sendMessage: OverloadingSendMessage<
+  ListenerTypes,
+  ListenerKeys
+> = (ws: WebSocket, type: string, event: string, message: any) => {
   ws.send(
     JSON.stringify({
       type,
