@@ -113,7 +113,7 @@ export const connectToServer = (server: RemoteServer) => {
   const ws = new WebSocket(`ws://${server.address}`)
 
   // Handle connection open.
-  ws.onopen = () => addConnection(server.name, ws)
+  ws.onopen = () => checkAndAddConnection(server.name, ws)
 
   // Handle errors.
   ws.onerror = () => {
@@ -129,21 +129,10 @@ export const connectToServer = (server: RemoteServer) => {
  * @param ws WebSocket connection.
  * @returns True if the connection was added, false if it already exists.
  */
-const addConnection = (name: string, ws: WebSocket) => {
+const checkAndAddConnection = (name: string, ws: WebSocket) => {
   // Check if the connection already exists.
   if (!connections.has(name) || connections.get(name)?.readyState !== ws.OPEN) {
-    // Add the connection.
-    connections.set(name, ws)
-
-    // Listen for events.
-    listenForServerInfo(ws, false)
-    listenForMessages(ws)
-    listenForErrors(ws)
-
-    // Invoke the connection event.
-    invokeListeners('connection', 'open', ws, null)
-
-    console.log('Connected to server:', name)
+    addConnection(name, ws)
     return true
   }
 
@@ -151,6 +140,27 @@ const addConnection = (name: string, ws: WebSocket) => {
   sendMessage(ws, 'connection', 'error', 'Already connected to server.')
   ws.close()
   return false
+}
+
+/**
+ * Add a new connection to the connections map.
+ *
+ * @param name Name of the connection.
+ * @param ws WebSocket connection.
+ */
+const addConnection = (name: string, ws: WebSocket) => {
+  // Add the connection.
+  connections.set(name, ws)
+
+  // Listen for events.
+  listenForServerInfo(ws, false)
+  listenForMessages(ws)
+  listenForErrors(ws)
+
+  // Invoke the connection event.
+  invokeListeners('connection', 'open', ws, null)
+
+  console.log('Connected to server:', name)
 }
 
 /**
@@ -190,7 +200,7 @@ const listenForServerInfo = (ws: WebSocket, server = true) => {
     (ws, data) => {
       console.log('Connection info:', data)
       if (ws === ws && data?.name) {
-        if (server) addConnection(data.name, ws)
+        if (server) checkAndAddConnection(data.name, ws)
         else sendMessage(ws, 'connection', 'connection-info', getServerInfo())
         removeListener(listener)
       }
