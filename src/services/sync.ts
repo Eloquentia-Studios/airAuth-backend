@@ -7,11 +7,20 @@ import {
   startWebsocket
 } from './websocket.js'
 import type { SyncConfiguration } from '../types/SyncConfiguration'
-import type RecordHashes from '../types/RecordHashes.d'
 import { syncConfiguration } from '../types/SyncConfiguration.js'
-import { getOtpHashes } from './otp.js'
-import { getUserHashes, getKeypairHashes } from './users.js'
-import type RecordHash from '../types/RecordHash.d'
+import { getAllRecordHashes } from './prisma.js'
+import arraysAreEqual from '../lib/arraysAreEqual.js'
+import type {
+  RecordComparison,
+  RecordComparisons
+} from '../types/RecordComparison.d'
+import type {
+  RecordHash,
+  RecordHashes,
+  TableNames,
+  TableNamesList
+} from '../types/RecordHash.js'
+import { Console } from 'console'
 
 let configuration: SyncConfiguration
 
@@ -85,17 +94,6 @@ const setupSyncWebsocket = () => {
 }
 
 /**
- * Get all record hashes from the database.
- *
- * @returns All record hashes.
- */
-const getAllRecordHashes = async (): Promise<RecordHashes> => ({
-  users: await getUserHashes(),
-  keyPairs: await getKeypairHashes(),
-  otps: await getOtpHashes()
-})
-
-/**
  * Recieve record hashes from the remote server.
  *
  * @param ws Websocket.
@@ -105,31 +103,50 @@ const recieveRecordHashes = async (
   ws: WebSocket,
   remoteRecordHashes: RecordHashes
 ) => {
-  // Compare remote and local record hashes.
+  // Compare remote and local tables.
   const localRecordHashes = await getAllRecordHashes()
-  const mismatchingUserRecords = compareRecords(
-    localRecordHashes.users,
-    remoteRecordHashes.users,
-    ws
-  )
-  const mismatchingKeyPairRecords = compareRecords(
-    localRecordHashes.keyPairs,
-    remoteRecordHashes.keyPairs,
-    ws
-  )
-  const mismatchingOtpRecords = compareRecords(
-    localRecordHashes.otps,
-    remoteRecordHashes.otps,
-    ws
+  const remoteTableNames = Object.keys(remoteRecordHashes) as TableNamesList
+  const localTableNames = Object.keys(localRecordHashes) as TableNamesList
+  if (!arraysAreEqual(remoteTableNames, localTableNames)) {
+    throw new Error('Mismatching tables on servers, cannot sync.')
+  }
+
+  // Compare records.
+  const mismatchingHashes: RecordComparisons = {}
+  await Promise.all(
+    localTableNames.map((tableName) =>
+      getMismatchingRecords(
+        tableName,
+        localRecordHashes,
+        remoteRecordHashes,
+        mismatchingHashes
+      )
+    )
   )
 
   // Send mismatching records to the other server.
-  const payload = {
-    users: mismatchingUserRecords,
-    keyPairs: mismatchingKeyPairRecords,
-    otps: mismatchingOtpRecords
-  }
-  sendMessage(ws, 'sync', 'mismatchingRecords', payload)
+  sendMessage(ws, 'sync', 'mismatchingRecords', mismatchingHashes)
+}
+
+/**
+ * Get mismatching records for a table.
+ *
+ * @param tableName Table name.
+ * @param localRecordHashes Local record hashes.
+ * @param remoteRecordHashes Remote record hashes.
+ * @param mismatchingHashes Mismatching hashes.
+ */
+const getMismatchingRecords = async (
+  tableName: TableNames,
+  localRecordHashes: RecordHashes,
+  remoteRecordHashes: RecordHashes,
+  mismatchingHashes: RecordComparisons
+) => {
+  const localHashes = localRecordHashes[tableName]
+  const remoteHashes = remoteRecordHashes[tableName]
+  if (!localHashes || !remoteHashes) throw new Error('Invalid table name')
+  const mismatchingRecords = await compareRecords(localHashes, remoteHashes)
+  mismatchingHashes[tableName] = mismatchingRecords
 }
 
 /**
@@ -138,11 +155,10 @@ const recieveRecordHashes = async (
  * @param local Local record hashes.
  * @param remote Remote record hashes.
  */
-const compareRecords = (
+const compareRecords = async (
   local: RecordHash[],
-  remote: RecordHash[],
-  ws: WebSocket
-) => {
+  remote: RecordHash[]
+): Promise<RecordComparison> => {
   return {
     localOnly: getMissingRecords(local, remote),
     remoteOnly: getMissingRecords(remote, local),
@@ -150,29 +166,17 @@ const compareRecords = (
   }
 }
 
+/**
+ * Handle mismatching records from the remote server.
+ *
+ * @param ws Websocket.
+ * @param payload Mismatching records.
+ */
 const handleMismatchingRecords = (
   ws: WebSocket,
-  payload: {
-    users: {
-      localOnly: RecordHash[]
-      remoteOnly: RecordHash[]
-      mismatchHashes: RecordHash[]
-    }
-    keyPairs: {
-      localOnly: RecordHash[]
-      remoteOnly: RecordHash[]
-      mismatchHashes: RecordHash[]
-    }
-    otps: {
-      localOnly: RecordHash[]
-      remoteOnly: RecordHash[]
-      mismatchHashes: RecordHash[]
-    }
-  }
+  payload: RecordComparisons
 ) => {
-  console.log('Users:', payload.users)
-  console.log('Key pairs:', payload.keyPairs)
-  console.log('OTPs:', payload.otps)
+  // TODO: Handle mismatching records.
 }
 
 /**
