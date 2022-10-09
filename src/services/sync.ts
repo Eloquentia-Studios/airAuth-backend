@@ -8,7 +8,12 @@ import {
 } from './websocket.js'
 import type { SyncConfiguration } from '../types/SyncConfiguration'
 import { syncConfiguration } from '../types/SyncConfiguration.js'
-import { applyRecords, getAllRecordHashes, getRecord } from './prisma.js'
+import {
+  applyRecords,
+  getAllRecordHashes,
+  getRecord,
+  getRecords
+} from './prisma.js'
 import arraysAreEqual from '../lib/arraysAreEqual.js'
 import type {
   RecordComparison,
@@ -210,18 +215,147 @@ const handleMismatchingRecords = async (
 ) => {
   // NOTE: Local is what the other server has, remote is what we have!
   const tables = Object.keys(payload) as TableNamesList
+  const toSend: RecordComparisons = {}
   await Promise.all(
-    tables.map(async (tableName) => {
-      // Apply all local records.
-      const localRecords = payload[tableName]?.localOnly
-      if (!localRecords) throw new Error('Invalid local only records!')
-      await applyRecords(tableName, localRecords)
-
-      // Check update time of mismatching records.
-
-      // Send mismatching and remote records to the other server.
+    tables.map((tableName) => {
+      return applyAndCompareRemoteRecords(tableName, payload, toSend)
     })
   )
+
+  console.log(toSend)
+}
+
+/**
+ * Apply local records and newer mismatching records to
+ * database, and append older mismatching records together
+ * with the remote record data to send to the other server.
+ * Notice: Local is what the other server has, remote is what we have!a
+ *
+ * @param tableName Table name.
+ * @param payload Record comparisons.
+ * @param toSend Reference to the object to append send data to.
+ */
+const applyAndCompareRemoteRecords = async (
+  tableName: TableNames,
+  payload: RecordComparisons,
+  toSend: RecordComparisons
+) => {
+  // Apply all local records.
+  await applyLocalRecords(tableName, payload)
+
+  // Check update time of mismatching records.
+  const [mismatchingLocal, mismatchingRemote] =
+    await getMismatchingRemoteRecords(tableName, payload)
+
+  // Apply mismatching local records.
+  await applyMismatchingLocalRecords(
+    tableName,
+    mismatchingLocal,
+    mismatchingRemote
+  )
+
+  // Newer on this server.
+  const newerRemote = checkNewestUpdateTime(mismatchingRemote, mismatchingLocal)
+
+  const remoteOnly = await getRemoteOnlyRecords(tableName, payload)
+
+  // Append newer mismatching records and remote only records.
+  toSend[tableName] = {
+    localOnly: [],
+    mismatchHashes: newerRemote,
+    remoteOnly
+  }
+}
+
+/**
+ * Apply all local records.
+ * Notice: Local server is the other server.
+ *
+ * @param tableName Table name.
+ * @param payload Record comparisons from other server.
+ */
+const applyLocalRecords = async (
+  tableName: TableNames,
+  payload: RecordComparisons
+) => {
+  const localRecords = payload[tableName]?.localOnly
+  if (!localRecords) throw new Error('Invalid local only records!')
+  await applyRecords(tableName, localRecords)
+}
+
+/**
+ * Apply newer local records to the database.
+ * Notice: Local is the other server!
+ *
+ * @param tableName Table name.
+ * @param mismatchingLocal Local mismatching records.
+ * @param mismatchingRemote Remote mismatching records.
+ */
+const applyMismatchingLocalRecords = async (
+  tableName: TableNames,
+  mismatchingLocal: DatabaseRecord[],
+  mismatchingRemote: DatabaseRecord[]
+) => {
+  const newerLocal = checkNewestUpdateTime(mismatchingLocal, mismatchingRemote)
+  await applyRecords(tableName, newerLocal)
+}
+
+/**
+ * Get all remote only records from the database.
+ * Notice: Remote is this server!
+ *
+ * @param tableName Table name.
+ * @param payload Record comparisons.
+ * @returns Records from database.
+ */
+const getRemoteOnlyRecords = async (
+  tableName: TableNames,
+  payload: RecordComparisons
+) => {
+  const remoteOnlyRecords = payload[tableName]?.remoteOnly
+  if (!remoteOnlyRecords) throw new Error('Invalid remote only records!')
+  return await getRecords(
+    tableName,
+    remoteOnlyRecords.map((r) => r.id)
+  )
+}
+
+/**
+ * Get mismatching remote records.
+ *
+ * @param tableName Table name.
+ * @param payload Payload.
+ * @returns Local and remote mismatching records.
+ */
+const getMismatchingRemoteRecords = async (
+  tableName: TableNames,
+  payload: RecordComparisons
+) => {
+  const mismatchingRecordsLocal = payload[tableName]?.mismatchHashes
+  if (!mismatchingRecordsLocal) throw new Error('Invalid mismatching records!')
+  const mismatchingRecordsRemote = await getRecords(
+    tableName,
+    mismatchingRecordsLocal.map((r) => r.id)
+  )
+  return [mismatchingRecordsLocal, mismatchingRecordsRemote]
+}
+
+/**
+ * Check which records are newer.
+ *
+ * @param recordsA Records A.
+ * @param recordsB Records B.
+ * @returns Records that are newer.
+ */
+const checkNewestUpdateTime = (
+  recordsA: DatabaseRecord[],
+  recordsB: DatabaseRecord[]
+): DatabaseRecord[] => {
+  return recordsA.filter((recordA) => {
+    const recordB = recordsB.find((r) => r.id === recordA.id)
+    if (!recordB) throw new Error('Invalid record B!')
+    return recordA.updatedAt > recordB.updatedAt
+  })
 }
 
 /**

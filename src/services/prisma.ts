@@ -46,6 +46,27 @@ export const getRecord = async (
 }
 
 /**
+ * Get records from a table.
+ *
+ * @param tableName Table name.
+ * @param ids Record IDs.
+ * @returns Record data.
+ */
+export const getRecords = async (
+  tableName: TableNames,
+  ids: string[]
+): Promise<DatabaseRecord[]> => {
+  // @ts-ignore - Prisma model names are dynamic.
+  return await prisma[tableName].findMany({
+    where: {
+      id: {
+        in: ids
+      }
+    }
+  })
+}
+
+/**
  * Apply records to the database.
  *
  * @param tableName Table name.
