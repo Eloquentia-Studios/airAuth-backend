@@ -76,16 +76,14 @@ export const applyRecords = async (
   tableName: TableNames,
   records: DatabaseRecord[]
 ) => {
-  await Promise.all(
-    records.map(async (record) => {
-      // @ts-ignore - Prisma model names are dynamic.
-      await prisma[tableName].upsert({
-        where: { id: record.id },
-        create: record,
-        update: record
-      })
+  for (const record of records) {
+    // @ts-ignore - Prisma model names are dynamic.
+    await prisma[tableName].upsert({
+      where: { id: record.id },
+      create: record,
+      update: record
     })
-  )
+  }
 }
 
 let modelNames: TableNamesList = []

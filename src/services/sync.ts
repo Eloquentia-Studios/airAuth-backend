@@ -30,6 +30,15 @@ import { setDbWritesPaused } from './pauseTraffic.js'
 
 let configuration: SyncConfiguration
 
+// Prioritization of tables.
+const tableSyncPriority: {
+  singleThreaded: TableNamesList
+  multiThreaded: TableNamesList
+} = {
+  singleThreaded: ['user'],
+  multiThreaded: ['otp', 'keyPair']
+}
+
 /**
  * Initialize the sync service.
  */
@@ -223,9 +232,16 @@ const handleMismatchingRecords = async (
   // NOTE: Local is what the other server has, remote is what we have!
   const tables = Object.keys(payload) as TableNamesList
   const toSend: RecordComparisons = {}
+
+  // Run single-threaded tables first.
+  for (const tableName of tableSyncPriority.singleThreaded) {
+    await applyAndCompareRemoteRecords(tableName, payload, toSend)
+  }
+
+  // Run multi-threaded tables second.
   await Promise.all(
-    tables.map((tableName) => {
-      return applyAndCompareRemoteRecords(tableName, payload, toSend)
+    tableSyncPriority.multiThreaded.map(async (tableName) => {
+      await applyAndCompareRemoteRecords(tableName, payload, toSend)
     })
   )
 
@@ -283,18 +299,17 @@ const applyAndCompareRemoteRecords = async (
  */
 const applyNewerRecords = async (ws: WebSocket, payload: RecordComparisons) => {
   const tables = Object.keys(payload) as TableNamesList
-  await Promise.all(
-    tables.map(async (tableName) => {
-      // Apply mismatching remote records.
-      const mismatchingRecords = payload[tableName]?.mismatchHashes
-      if (!mismatchingRecords) throw new Error('Invalid mismatching records')
-      await applyRecords(tableName, mismatchingRecords)
 
-      // Apply remote only records.
-      const remoteOnlyRecords = payload[tableName]?.remoteOnly
-      if (!remoteOnlyRecords) throw new Error('Invalid remote only records')
-      await applyRecords(tableName, remoteOnlyRecords as DatabaseRecord[])
-    })
+  // Run single-threaded tables first.
+  for (const tableName of tableSyncPriority.singleThreaded) {
+    await applyNewerRecordsToDb(tableName, payload)
+  }
+
+  // Run multi-threaded tables second.
+  await Promise.all(
+    tables.map(
+      async (tableName) => await applyNewerRecordsToDb(tableName, payload)
+    )
   )
 
   // Send success message.
@@ -302,6 +317,21 @@ const applyNewerRecords = async (ws: WebSocket, payload: RecordComparisons) => {
 
   // Unpause writes to the database.
   setDbWritesPaused(false)
+}
+
+const applyNewerRecordsToDb = async (
+  tableName: TableNames,
+  payload: RecordComparisons
+) => {
+  // Apply mismatching remote records.
+  const mismatchingRecords = payload[tableName]?.mismatchHashes
+  if (!mismatchingRecords) throw new Error('Invalid mismatching records')
+  await applyRecords(tableName, mismatchingRecords)
+
+  // Apply remote only records.
+  const remoteOnlyRecords = payload[tableName]?.remoteOnly
+  if (!remoteOnlyRecords) throw new Error('Invalid remote only records')
+  await applyRecords(tableName, remoteOnlyRecords as DatabaseRecord[])
 }
 
 /**
