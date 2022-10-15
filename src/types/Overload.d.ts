@@ -78,6 +78,19 @@ export type OverloadingSendMessage<
     >
   : never
 
+export type OverloadingSendMessageAll<
+  Mappings,
+  Keys extends string
+> = keyof Mappings extends Keys
+  ? UnionToIntersection<
+      Values<{
+        [Prop in Keys]: Prop extends keyof Mappings
+          ? (type: Prop, event: Mappings[Prop], message: any) => any
+          : (ws: WebSocket, type: Prop) => any
+      }>
+    >
+  : never
+
 export type OverloadingInvokeListener<
   Mappings,
   Keys extends string

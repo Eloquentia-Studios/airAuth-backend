@@ -4,6 +4,7 @@ import type {
   Overloading,
   OverloadingInvokeListener,
   OverloadingSendMessage,
+  OverloadingSendMessageAll,
   OverloadingWithFunction
 } from '../types/Overload.d'
 import type { RemoteServer } from '../types/SyncConfiguration'
@@ -231,4 +232,19 @@ export const sendMessage: OverloadingSendMessage<
       message
     })
   )
+}
+
+/**
+ * Send an event to all websockets.
+ *
+ * @param type Type of event.
+ * @param event Event to send.
+ * @param message Message to send.
+ */
+export const sendEvent: OverloadingSendMessageAll<
+  ListenerTypes,
+  ListenerKeys
+> = (type: string, event: string, message: any) => {
+  // @ts-expect-error - This is checked by overloading.
+  connections.forEach(async (ws) => sendMessage(ws, type, event, message))
 }

@@ -1,8 +1,9 @@
 import type { Otp } from '@prisma/client'
 import createUpdatedPrismaObject from '../lib/createUpdatedPrismaObject.js'
 import hashObject from '../lib/hashObject.js'
-import type RecordHash from '../types/RecordHash.d'
+import type { RecordHash } from '../types/RecordHash.d'
 import prisma from './prisma.js'
+import { updateRecord } from './sync.js'
 
 /**
  * Add a new OTP to the database.
@@ -23,6 +24,9 @@ export const addOtp = async (url: string, ownerId: string): Promise<Otp> => {
       }
     }
   })
+
+  // Send to remote servers.
+  updateRecord('otp', otp)
 
   return otp
 }
@@ -83,7 +87,7 @@ export const deleteOtp = async (id: string): Promise<Otp> => {
  * @param id Otp id.
  * @param issuer Otp issuer.
  * @param label Otp label.
- * @returns The updated Otp object.
+ * @returns The updated Otp object.d
  */
 export const updateOtp = async (
   id: string,
@@ -104,6 +108,9 @@ export const updateOtp = async (
       hash: hashObject(newOtpData)
     }
   })
+
+  // Send to remote servers.
+  updateRecord('otp', updatedOtp)
 
   return updatedOtp
 }

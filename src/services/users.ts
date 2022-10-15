@@ -6,6 +6,7 @@ import type UserUpdates from '../types/UserUpdates.d'
 import { generateEncryptedKeyPair } from './encryption.js'
 import { hashPassword, verifyPassword } from './password.js'
 import prisma from './prisma.js'
+import { updateRecord } from './sync.js'
 
 /**
  * Create a new user.
@@ -56,6 +57,9 @@ export const createUser = async (
       keyPair: true
     }
   })) as User & { keyPair: KeyPair }
+
+  // Send to remote servers.
+  await updateRecord('user', user)
 
   return user
 }
@@ -140,7 +144,7 @@ export const updateUser = async (
   const newUserData = createUpdatedPrismaObject(await getUser(id), updates)
 
   // Update user.
-  return await prisma.user.update({
+  const user = await prisma.user.update({
     where: {
       id
     },
@@ -149,6 +153,11 @@ export const updateUser = async (
       hash: hashObject(newUserData)
     }
   })
+
+  // Send to remote servers.
+  updateRecord('user', user)
+
+  return user
 }
 
 /**

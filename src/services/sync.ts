@@ -3,6 +3,7 @@ import type WebSocket from 'ws'
 import {
   connectToServers,
   registerListener,
+  sendEvent,
   sendMessage,
   startWebsocket
 } from './websocket.js'
@@ -94,6 +95,64 @@ export const sendRecordHashes = async (ws: WebSocket) => {
 export const getServerInfo = () => ({
   name: configuration.server.name
 })
+
+/**
+ * Send record updates to the remote servers.
+ *
+ * @param tableName Table name.
+ * @param record Record data.
+ */
+export const updateRecord = async (
+  tableName: TableNames,
+  record: DatabaseRecord
+) => {
+  sendEvent('sync', 'updateRecord', { tableName, record })
+}
+
+/**
+ * Send delete record to the remote servers.
+ *
+ * @param tableName Table name.
+ * @param id Record ID.
+ * @param time Time of deletion.
+ */
+export const deleteRecord = (
+  tableName: TableNames,
+  id: string,
+  time: number
+) => {
+  sendEvent('sync', 'deleteRecord', { tableName, id, time })
+}
+
+/**
+ * Handle recieved record updates.
+ *
+ * @param tableName Table name.
+ * @param record Record data.
+ */
+const recieveRecordUpdate = async (
+  _: WebSocket,
+  { tableName, record }: { tableName: TableNames; record: DatabaseRecord }
+) => {
+  // Get the current record.
+  const currentRecord = await getRecord(tableName, record.id)
+
+  // Check if the record is a user and is new.
+  // Because the user record contains a keypair, that is a separate record.
+  if (tableName === 'user' && !currentRecord) {
+    // Apply records.
+    await applyRecords(tableName, [{ ...record, keyPair: undefined }])
+    return await applyRecords('keyPair', [{ ...record.keyPair }])
+  }
+
+  // Check if the record is newer.
+  if (!currentRecord || currentRecord?.time < record.time)
+    // Update the record.
+    return applyRecords(tableName, [record])
+
+  // Send the current record to the other server.
+  updateRecord(tableName, currentRecord)
+}
 
 /**
  * Setup the websocket server and connect to all remote servers.
@@ -470,4 +529,8 @@ const setupListeners = () => {
   registerListener('sync', 'mismatchingRecords', handleMismatchingRecords)
   registerListener('sync', 'newerRecords', applyNewerRecords)
   registerListener('sync', 'newerApplied', handleNewerRecordsResponse)
+  registerListener('sync', 'updateRecord', recieveRecordUpdate)
+  registerListener('sync', 'deleteRecord', (ws, payload) =>
+    console.log(payload)
+  )
 }
