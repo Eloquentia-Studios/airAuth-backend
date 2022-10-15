@@ -7,6 +7,8 @@ services:
       - POSTGRES_DB=airAuth
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+    volumes:
+      - ./volumes/postgres1:/var/lib/postgresql/data
     restart: 'always'
     networks:
       - airAuth1
@@ -36,6 +38,8 @@ services:
       - POSTGRES_DB=airAuth
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+    volumes:
+      - ./volumes/postgres2:/var/lib/postgresql/data
     restart: 'always'
     networks:
       - airAuth2

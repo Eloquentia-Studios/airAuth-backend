@@ -43,3 +43,6 @@ yarn.lock
 
 # Config files
 config/
+
+# Docker volumes
+volumes/

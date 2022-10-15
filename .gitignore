@@ -44,3 +44,6 @@ yarn.lock
 # Config files
 config/pems/*.key
 config/server*.config.json
+
+# Docker volumes
+volumes/
