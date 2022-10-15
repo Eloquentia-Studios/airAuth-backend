@@ -70,7 +70,6 @@ const invokeListeners: OverloadingInvokeListener<
   ListenerTypes,
   ListenerKeys
 > = (type: string, event: string, ws: WebSocket, data: any) => {
-  // TODO: Add type checking for the parameters.
   if (socketListeners[type] && socketListeners[type][event]) {
     const ids = Object.keys(socketListeners[type][event])
     ids.forEach((id) => socketListeners[type][event][id](ws, data))
