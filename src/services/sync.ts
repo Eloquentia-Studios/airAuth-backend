@@ -28,7 +28,7 @@ import type {
   TableNamesList
 } from '../types/RecordHash.js'
 import DatabaseRecord from './../types/DatabaseRecord.d'
-import { setDbWritesPaused } from './pauseTraffic.js'
+import { dbWritesPaused, setDbWritesPaused } from './pauseTraffic.js'
 
 let configuration: SyncConfiguration
 
@@ -77,7 +77,13 @@ export const initSync = () => {
  *
  * @param ws Websocket to send the message via.
  */
-export const sendRecordHashes = async (ws: WebSocket) => {
+export const sendRecordHashes = async (ws: WebSocket): Promise<void> => {
+  // Wait until the database is ready. Prevents issues with multiple running syncs.
+  if (dbWritesPaused()) {
+    setTimeout(() => sendRecordHashes(ws), 2500)
+    return
+  }
+
   // Pause writes to the database.
   setDbWritesPaused(true)
 
@@ -503,9 +509,24 @@ const handleNewerRecordsResponse = async (ws: WebSocket, success: boolean) => {
   if (success) {
     // Unpause writes to the database.
     setDbWritesPaused(false)
-  } else {
-    throw new Error('Remote server failed to apply newer records!')
+
+    // Run sync again after a delay.
+    const time = configuration.fullSyncInterval * 60000
+    if (time <= 0) return
+    return setTimeout(() => runIntermittentSync(ws), time)
   }
+
+  throw new Error('Remote server failed to apply newer records!')
+}
+
+/**
+ * Runs an intermittent sync.
+ *
+ * @param ws Websocket connection.
+ */
+const runIntermittentSync = async (ws: WebSocket) => {
+  console.log('Running intermittent sync...')
+  return await sendRecordHashes(ws)
 }
 
 /**

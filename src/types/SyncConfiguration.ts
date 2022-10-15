@@ -15,6 +15,7 @@ export const syncConfiguration = z.object({
     port: z.number().int().min(1).max(65535)
   }),
   servers: z.array(remoteServer).max(1),
+  fullSyncInterval: z.number().int().min(0).max(1440), // 0 = disabled
   secret: z.string().min(15).max(512),
   startDelay: z.number().int().min(0).max(10000),
   connectOnStart: z.boolean()
