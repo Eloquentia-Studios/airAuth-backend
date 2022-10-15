@@ -1,7 +1,7 @@
 import type { User, KeyPair } from '@prisma/client'
 import createUpdatedPrismaObject from '../lib/createUpdatedPrismaObject.js'
 import hashObject from '../lib/hashObject.js'
-import type RecordHash from '../types/RecordHash.d'
+import type { RecordHash } from '../types/RecordHash.d'
 import type UserUpdates from '../types/UserUpdates.d'
 import { generateEncryptedKeyPair } from './encryption.js'
 import { hashPassword, verifyPassword } from './password.js'
