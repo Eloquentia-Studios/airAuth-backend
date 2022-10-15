@@ -13,7 +13,8 @@ import {
   applyRecords,
   getAllRecordHashes,
   getRecord,
-  getRecords
+  getRecords,
+  deleteRecord as deleteRecordFromDatabase
 } from './prisma.js'
 import arraysAreEqual from '../lib/arraysAreEqual.js'
 import type {
@@ -146,9 +147,35 @@ const recieveRecordUpdate = async (
   }
 
   // Check if the record is newer.
-  if (!currentRecord || currentRecord?.time < record.time)
+  if (!currentRecord || currentRecord?.updatedAt < record.updatedAt)
     // Update the record.
     return applyRecords(tableName, [record])
+
+  // Send the current record to the other server.
+  updateRecord(tableName, currentRecord)
+}
+
+/**
+ * Handle recieved record deletions.
+ *
+ * @param tableName Table name.
+ * @param id Record ID.
+ * @param time Time of deletion.
+ */
+const recieveRecordDeletion = async (
+  _: WebSocket,
+  { tableName, id, time }: { tableName: TableNames; id: string; time: number }
+) => {
+  // Get the current record.
+  const currentRecord = await getRecord(tableName, id)
+
+  // Check if the record exists.
+  if (!currentRecord) return
+
+  // Check if the record is newer.
+  if (currentRecord?.updatedAt < new Date(time))
+    // Delete the record.
+    return deleteRecordFromDatabase(tableName, id)
 
   // Send the current record to the other server.
   updateRecord(tableName, currentRecord)
@@ -530,7 +557,5 @@ const setupListeners = () => {
   registerListener('sync', 'newerRecords', applyNewerRecords)
   registerListener('sync', 'newerApplied', handleNewerRecordsResponse)
   registerListener('sync', 'updateRecord', recieveRecordUpdate)
-  registerListener('sync', 'deleteRecord', (ws, payload) =>
-    console.log(payload)
-  )
+  registerListener('sync', 'deleteRecord', recieveRecordDeletion)
 }

@@ -3,7 +3,7 @@ import createUpdatedPrismaObject from '../lib/createUpdatedPrismaObject.js'
 import hashObject from '../lib/hashObject.js'
 import type { RecordHash } from '../types/RecordHash.d'
 import prisma from './prisma.js'
-import { updateRecord } from './sync.js'
+import { deleteRecord, updateRecord } from './sync.js'
 
 /**
  * Add a new OTP to the database.
@@ -77,6 +77,9 @@ export const deleteOtp = async (id: string): Promise<Otp> => {
       id
     }
   })
+
+  // Send delete to remote servers.
+  deleteRecord('otp', deletedOtp.id, Date.now())
 
   return deletedOtp
 }

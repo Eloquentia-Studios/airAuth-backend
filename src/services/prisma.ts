@@ -86,6 +86,19 @@ export const applyRecords = async (
   }
 }
 
+/**
+ * Delete a record from a table.
+ *
+ * @param tableName Table name.
+ * @param id Record ID.
+ */
+export const deleteRecord = async (tableName: TableNames, id: string) => {
+  // @ts-ignore - Prisma model names are dynamic.
+  await prisma[tableName].delete({
+    where: { id }
+  })
+}
+
 let modelNames: TableNamesList = []
 
 /**
