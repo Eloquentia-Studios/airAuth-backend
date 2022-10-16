@@ -16,7 +16,7 @@ services:
     ports:
       - 8080:8080
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/airAuth?schema=public
+      - DATABASE_URL=postgresql://postgres:postgres@postgres1:5432/airAuth?schema=public
       - CIPHER_IV=#hzCY@5&S#JqvDgS1
     volumes:
       - ./dist:/app/dist
