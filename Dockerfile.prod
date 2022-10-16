@@ -1,0 +1,14 @@
+FROM node:18.9.0
+
+WORKDIR /app
+
+COPY package.json ./
+
+RUN npm install
+
+COPY . .
+
+EXPOSE 8080
+EXPOSE 7070
+
+CMD echo "Sleeping for 10 seconds to ensure database has started.";/bin/sleep 10;npx prisma migrate deploy;npx prisma generate;npm run build;npm run start

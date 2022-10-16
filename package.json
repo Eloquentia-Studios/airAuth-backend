@@ -1,6 +1,6 @@
 {
-  "name": "airAuth-backend",
-  "version": "1.0.0",
+  "name": "airauth-backend",
+  "version": "0.1.0",
   "description": "",
   "type": "module",
   "main": "index.js",
@@ -8,7 +8,7 @@
     "watch": "tsc --watch",
     "dev": "nodemon ./dist/app.js",
     "build": "tsc",
-    "start": "tsc && nodemon ./dist/app.js"
+    "start": "node ./dist/app.js"
   },
   "keywords": [],
   "authors": [
