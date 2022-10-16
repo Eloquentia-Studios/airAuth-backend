@@ -6,9 +6,33 @@ import type KeyPair from '../types/KeyPair.d'
  *
  * @returns Private and public key as a KeyPair object.
  */
-export const generateKeyPair = async (): Promise<KeyPair> => {
+export const generateRSAKeyPair = async (): Promise<KeyPair> => {
   const keys = crypto.generateKeyPairSync('rsa', {
     modulusLength: 4096,
+    publicKeyEncoding: {
+      type: 'spki',
+      format: 'pem'
+    },
+    privateKeyEncoding: {
+      type: 'pkcs8',
+      format: 'pem'
+    }
+  })
+
+  return {
+    publicKey: keys.publicKey,
+    privateKey: keys.privateKey
+  }
+}
+
+/**
+ * Generate a random ECDSA key pair.
+ *
+ * @returns Private and public key as a KeyPair object.
+ */
+export const generateECDSAKeyPair = async (): Promise<KeyPair> => {
+  const keys = crypto.generateKeyPairSync('ec', {
+    namedCurve: 'secp521r1',
     publicKeyEncoding: {
       type: 'spki',
       format: 'pem'
@@ -34,7 +58,7 @@ export const generateKeyPair = async (): Promise<KeyPair> => {
 export const generateEncryptedKeyPair = async (
   key: string
 ): Promise<KeyPair> => {
-  const { privateKey, publicKey } = await generateKeyPair()
+  const { privateKey, publicKey } = await generateRSAKeyPair()
 
   return {
     privateKey: await symmetricEncrypt(privateKey, key),
