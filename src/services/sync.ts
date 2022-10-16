@@ -29,7 +29,6 @@ import type {
 } from '../types/RecordHash.js'
 import DatabaseRecord from './../types/DatabaseRecord.d'
 import { dbWritesPaused, setDbWritesPaused } from './pauseTraffic.js'
-import writeDefaultConfig from '../lib/writeDefaultConfiguration.js'
 
 let configuration: SyncConfiguration
 
@@ -47,7 +46,6 @@ const tableSyncPriority: {
  */
 export const initSync = () => {
   const configPath = process.env.CONFIG_PATH || './config/config.json'
-  if (!fs.existsSync(configPath)) writeDefaultConfig(configPath)
   const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))
   configuration = config.sync as SyncConfiguration
 

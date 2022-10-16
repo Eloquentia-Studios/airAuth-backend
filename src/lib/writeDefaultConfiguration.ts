@@ -29,8 +29,7 @@ const defaultConfig: ServerConfiguration = {
  */
 const writeDefaultConfig = (path: string) => {
   // Check if the file already exists.
-  if (existsSync(path))
-    throw new Error(`Configuration file already exists at ${path}`)
+  if (existsSync(path)) return
 
   // Write the file.
   writeFileSync(path, JSON.stringify(defaultConfig, null, 2))
