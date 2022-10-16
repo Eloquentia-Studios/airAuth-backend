@@ -1,7 +1,6 @@
 import WebSocket, { WebSocketServer } from 'ws'
 import type { ListenerKeys, ListenerTypes } from '../types/ListenerTypes.d'
 import type {
-  Overloading,
   OverloadingInvokeListener,
   OverloadingSendMessage,
   OverloadingSendMessageAll,

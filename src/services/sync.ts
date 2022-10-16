@@ -57,13 +57,10 @@ export const initSync = () => {
   }
 
   // Check if the sync service is enabled.
-  if (!configuration.enabled) {
-    console.log('Sync service is disabled.')
-    return
-  } else {
-    console.log('Sync service is enabled.')
-    console.log('Server name: ' + configuration.server.name)
-  }
+  if (!configuration.enabled) return console.log('Sync service is disabled.')
+
+  console.log('Sync service is enabled.')
+  console.log('Server name: ' + configuration.server.name)
 
   // Wait for the start delay.
   setTimeout(() => {
@@ -220,9 +217,8 @@ const recieveRecordHashes = async (
   const localRecordHashes = await getAllRecordHashes()
   const remoteTableNames = Object.keys(remoteRecordHashes) as TableNamesList
   const localTableNames = Object.keys(localRecordHashes) as TableNamesList
-  if (!arraysAreEqual(remoteTableNames, localTableNames)) {
+  if (!arraysAreEqual(remoteTableNames, localTableNames))
     throw new Error('Mismatching tables on servers, cannot sync.')
-  }
 
   // Compare records.
   const mismatchingHashes: RecordComparisons = {}
@@ -325,20 +321,48 @@ const handleMismatchingRecords = async (
   const tables = Object.keys(payload) as TableNamesList
   const toSend: RecordComparisons = {}
 
-  // Run single-threaded tables first.
-  for (const tableName of tableSyncPriority.singleThreaded) {
-    await applyAndCompareRemoteRecords(tableName, payload, toSend)
-  }
+  // Run single-threaded tables first, since other tables may depend on them.
+  await applySingleThreadedRecords(payload, toSend)
 
   // Run multi-threaded tables second.
-  await Promise.all(
-    tableSyncPriority.multiThreaded.map(async (tableName) => {
-      await applyAndCompareRemoteRecords(tableName, payload, toSend)
-    })
-  )
+  await applyMultiThreadedRecords(payload, toSend)
 
   // Send the records to the other server.
   sendMessage(ws, 'sync', 'newerRecords', toSend)
+}
+
+/**
+ * Apply and compare remote records single-threaded.
+ *
+ * @param records Records to apply.
+ * @param toSend Object that should contain the records that will be sent to the other server.
+ */
+const applySingleThreadedRecords = async (
+  records: RecordComparisons,
+  toSend: RecordComparisons
+) => {
+  // Apply the records.
+  for (const tableName of tableSyncPriority.singleThreaded) {
+    await applyAndCompareRemoteRecords(tableName, records, toSend)
+  }
+}
+
+/**
+ * Apply and compare remote records multi-threaded.
+ *
+ * @param records Records to apply.
+ * @param toSend Object that should contain the records that will be sent to the other server.
+ */
+const applyMultiThreadedRecords = async (
+  records: RecordComparisons,
+  toSend: RecordComparisons
+) => {
+  // Apply the records.
+  await Promise.all(
+    tableSyncPriority.multiThreaded.map(async (tableName) => {
+      await applyAndCompareRemoteRecords(tableName, records, toSend)
+    })
+  )
 }
 
 /**
@@ -373,6 +397,7 @@ const applyAndCompareRemoteRecords = async (
   // Newer on this server.
   const newerRemote = checkNewestUpdateTime(mismatchingRemote, mismatchingLocal)
 
+  // Newer on the other server.
   const remoteOnly = await getRemoteOnlyRecords(tableName, payload)
 
   // Append newer mismatching records and remote only records.
@@ -393,16 +418,10 @@ const applyNewerRecords = async (ws: WebSocket, payload: RecordComparisons) => {
   const tables = Object.keys(payload) as TableNamesList
 
   // Run single-threaded tables first.
-  for (const tableName of tableSyncPriority.singleThreaded) {
-    await applyNewerRecordsToDb(tableName, payload)
-  }
+  await applyNewerRecordsToDbSingleThreaded(payload)
 
   // Run multi-threaded tables second.
-  await Promise.all(
-    tables.map(
-      async (tableName) => await applyNewerRecordsToDb(tableName, payload)
-    )
-  )
+  await applyNewerRecordsToDbMultiThreaded(payload)
 
   // Send success message.
   sendMessage(ws, 'sync', 'newerApplied', true)
@@ -411,6 +430,42 @@ const applyNewerRecords = async (ws: WebSocket, payload: RecordComparisons) => {
   setDbWritesPaused(false)
 }
 
+/**
+ * Apply newer records to the database single-threaded.
+ *
+ * @param records Records to apply.
+ */
+const applyNewerRecordsToDbSingleThreaded = async (
+  records: RecordComparisons
+) => {
+  // Apply the records.
+  for (const tableName of tableSyncPriority.singleThreaded) {
+    await applyNewerRecordsToDb(tableName, records)
+  }
+}
+
+/**
+ * Apply newer records to the database multi-threaded.
+ *
+ * @param records Records to apply.
+ */
+const applyNewerRecordsToDbMultiThreaded = async (
+  records: RecordComparisons
+) => {
+  // Apply the records.
+  await Promise.all(
+    tableSyncPriority.multiThreaded.map(async (tableName) => {
+      await applyNewerRecordsToDb(tableName, records)
+    })
+  )
+}
+
+/**
+ * Apply newer records to the database.
+ *
+ * @param tableName Table name.
+ * @param payload Record comparisons.
+ */
 const applyNewerRecordsToDb = async (
   tableName: TableNames,
   payload: RecordComparisons
@@ -506,17 +561,16 @@ const getMismatchingRemoteRecords = async (
  * @param success Success.
  */
 const handleNewerRecordsResponse = async (ws: WebSocket, success: boolean) => {
-  if (success) {
-    // Unpause writes to the database.
-    setDbWritesPaused(false)
+  // Check if the response was successful.
+  if (!success) throw new Error('Remote server failed to apply newer records!')
 
-    // Run sync again after a delay.
-    const time = configuration.fullSyncInterval * 60000
-    if (time <= 0) return
-    return setTimeout(() => runIntermittentSync(ws), time)
-  }
+  // Unpause writes to the database.
+  setDbWritesPaused(false)
 
-  throw new Error('Remote server failed to apply newer records!')
+  // Run sync again after a delay.
+  const time = configuration.fullSyncInterval * 60000
+  if (time <= 0) return
+  return setTimeout(() => runIntermittentSync(ws), time)
 }
 
 /**
