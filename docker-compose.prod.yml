@@ -1,0 +1,44 @@
+# Before using this Docker Compose file make sure that you do the following:
+# 1. Generate a new CIPHER_IV which must be 16 characters long.
+# 2. Set the database username and password to something secure.
+# 3. After starting the container once, go into the configuraion file and set the
+#    secret key to something new and random.
+
+services:
+  # AirAuth uses a PostgreSQL database to store all of its data.
+  # The database is configured to use a volume to store the data.
+  # This means that the data will be stored on the host machine in
+  # the directory specified in the volume section.
+  postgres:
+    image: postgres:14-alpine
+    environment:
+      - POSTGRES_DB=airAuth
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    networks:
+      - airAuth
+
+  # AirAuth exposes two ports, one for the web interface and one for web socket
+  # communication between multiple servers if you are running the sync server.
+  # If you are not running the sync server you can remove port 7070.
+  airAuth:
+    image: airauthbackend:latest
+    ports:
+      - 8080:8080
+      - 7070:7070
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/airAuth?schema=public
+      - CIPHER_IV=#hzCY@5&S#JqvDgS1
+    volumes:
+      - ./config:/app/config
+    networks:
+      - airAuth
+    depends_on:
+      - postgres
+
+# To communicate between the two containers we need to create a network.
+networks:
+  airAuth:
+    driver: bridge
