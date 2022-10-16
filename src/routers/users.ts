@@ -12,11 +12,12 @@ import { isAuthenticated } from '../middlewares/isAuthenticated.js'
 import { internalServerErrorResponse } from './../lib/internalServerErrorResponse.js'
 import createResponseError from '../lib/createResponseError.js'
 import HttpError from '../enums/HttpError.js'
+import dbWritesPrevented from '../middlewares/dbWritesPrevented.js'
 
 const usersRouter = Router()
 
 // Handle POST /api/v1/user requests to create a new user.
-usersRouter.post('/', async (req, res) => {
+usersRouter.post('/', dbWritesPrevented, async (req, res) => {
   try {
     // Fetch the user information from the request body.
     const { username, email, phonenumber, password } = req.body
@@ -89,23 +90,28 @@ usersRouter.post('/login', async (req, res) => {
 })
 
 // Handle DELETE /api/v1/user requests to delete their user account.
-usersRouter.delete('/', isAuthenticated, async (req, res) => {
-  try {
-    // Get the current user.
-    const reqUser = req.user
+usersRouter.delete(
+  '/',
+  isAuthenticated,
+  dbWritesPrevented,
+  async (req, res) => {
+    try {
+      // Get the current user.
+      const reqUser = req.user
 
-    // Delete the user.
-    await deleteUser(reqUser.id)
+      // Delete the user.
+      await deleteUser(reqUser.id)
 
-    // Respond with 200 if the user was deleted.
-    return res.status(200).json({ message: 'Success!' })
-  } catch (error) {
-    internalServerErrorResponse(error, res)
+      // Respond with 200 if the user was deleted.
+      return res.status(200).json({ message: 'Success!' })
+    } catch (error) {
+      internalServerErrorResponse(error, res)
+    }
   }
-})
+)
 
 // Handle PATCH /api/v1/user requests to update the user's information.
-usersRouter.patch('/', isAuthenticated, async (req, res) => {
+usersRouter.patch('/', isAuthenticated, dbWritesPrevented, async (req, res) => {
   try {
     // Get the current user.
     const reqUser = req.user

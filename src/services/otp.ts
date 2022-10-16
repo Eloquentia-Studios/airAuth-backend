@@ -1,5 +1,9 @@
 import type { Otp } from '@prisma/client'
+import createUpdatedPrismaObject from '../lib/createUpdatedPrismaObject.js'
+import hashObject from '../lib/hashObject.js'
+import type { RecordHash } from '../types/RecordHash.d'
 import prisma from './prisma.js'
+import { deleteRecord, updateRecord } from './sync.js'
 
 /**
  * Add a new OTP to the database.
@@ -12,6 +16,7 @@ export const addOtp = async (url: string, ownerId: string): Promise<Otp> => {
   const otp = await prisma.otp.create({
     data: {
       url,
+      hash: hashObject({ url }),
       owner: {
         connect: {
           id: ownerId
@@ -19,6 +24,9 @@ export const addOtp = async (url: string, ownerId: string): Promise<Otp> => {
       }
     }
   })
+
+  // Send to remote servers.
+  updateRecord('otp', otp)
 
   return otp
 }
@@ -70,6 +78,9 @@ export const deleteOtp = async (id: string): Promise<Otp> => {
     }
   })
 
+  // Send delete to remote servers.
+  deleteRecord('otp', deletedOtp.id, Date.now())
+
   return deletedOtp
 }
 
@@ -79,22 +90,45 @@ export const deleteOtp = async (id: string): Promise<Otp> => {
  * @param id Otp id.
  * @param issuer Otp issuer.
  * @param label Otp label.
- * @returns The updated Otp object.
+ * @returns The updated Otp object.d
  */
 export const updateOtp = async (
   id: string,
   issuer?: string | null,
   label?: string | null
 ): Promise<Otp> => {
+  const newOtpData = createUpdatedPrismaObject(await getOtp(id), {
+    issuer,
+    label
+  })
+
   const updatedOtp = await prisma.otp.update({
     where: {
       id
     },
     data: {
-      issuer,
-      label
+      ...newOtpData,
+      hash: hashObject(newOtpData)
     }
   })
 
+  // Send to remote servers.
+  updateRecord('otp', updatedOtp)
+
   return updatedOtp
+}
+
+/**
+ * Generate a hash for all the records of all the OTPs.
+ *
+ * @returns Array of all otp uuids and their corresponding hashes.
+ */
+export const getOtpHashes = async (): Promise<RecordHash[]> => {
+  // Get all OTP records with hashes.
+  return await prisma.otp.findMany({
+    select: {
+      id: true,
+      hash: true
+    }
+  })
 }
