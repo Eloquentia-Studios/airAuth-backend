@@ -111,6 +111,36 @@ export const isValidUserInformation = async (
 }
 
 /**
+ * Check if user credentials are valid.
+ *
+ * @param identifier User identifier.
+ * @param password Password.
+ * @returns True if the identifier and password are valid, false otherwise.
+ */
+export const isValidCredentials = (
+  identifier: string,
+  password: string
+): string[] => {
+  const errors = []
+
+  if (
+    !isValidUsername(identifier) &&
+    !isValidEmail(identifier) &&
+    !isValidPhoneNumber(identifier)
+  )
+    errors.push(
+      'Invalid identifier, must be a username, email or phone number.'
+    )
+
+  if (!isValidPassword(password))
+    errors.push(
+      'Invalid password, must be at least 10 characters long and be a mix of lowercase, uppercase, numbers and special characters.'
+    )
+
+  return errors
+}
+
+/**
  * Checks if the given value is a valid username.
  *
  * @param username Value to validate.

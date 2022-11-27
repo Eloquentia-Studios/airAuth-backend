@@ -11,7 +11,10 @@ import {
   updateUser,
   validateUser
 } from '../services/users.js'
-import { isString, isValidUserInformation } from '../services/validate.js'
+import {
+  isValidCredentials,
+  isValidUserInformation
+} from '../services/validate.js'
 
 const usersRouter = new ErrorHandlingRouter()
 
@@ -34,8 +37,9 @@ usersRouter.post('/', dbWritesPrevented, async (req, res) => {
     return createResponseError(HttpError.BadRequest, errors, res)
 
   // Create a new user.
-  const { keyPair } = await createUser(username, email, password, phonenumber)
+  await createUser(username, email, password, phonenumber)
 
+  // Return a 200 status code.
   res.status(200).json({ message: 'Success' })
 })
 
@@ -44,12 +48,8 @@ usersRouter.post('/login', async (req, res) => {
   // Fetch the user information from the request body.
   const { identifier, password } = req.body
 
-  const errors = []
-
-  if (!isString(identifier)) errors.push('Identifier must be a string')
-
-  if (!isString(password)) errors.push('Password must be a string')
-
+  // Validate the user information.
+  const errors = isValidCredentials(identifier, password)
   if (errors.length > 0)
     return createResponseError(HttpError.BadRequest, errors, res)
 
@@ -58,7 +58,7 @@ usersRouter.post('/login', async (req, res) => {
 
   // Respond with 401 if the user is not valid.
   if (!user)
-    return res.status(401).json({ code: 401, errors: ['Invalid user'] })
+    return createResponseError(HttpError.Unauthorized, 'Invalid user', res)
 
   // Create a JWT token for the user.
   const token = generateToken(user)
@@ -66,6 +66,7 @@ usersRouter.post('/login', async (req, res) => {
   // Get encryption iv.
   const iv = process.env.CIPHER_IV || ''
 
+  // Respond with token, keypair and iv.
   res.status(200).json({
     token,
     keyPair: {
@@ -122,6 +123,7 @@ usersRouter.patch('/', isAuthenticated, dbWritesPrevented, async (req, res) => {
     password
   })
 
+  // Respond with 200 success.
   res.status(200).json({ message: 'Success!' })
 })
 
