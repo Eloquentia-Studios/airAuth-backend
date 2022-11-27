@@ -1,4 +1,9 @@
 import { Router } from 'express'
+import HttpError from '../enums/HttpError.js'
+import createResponseError from '../lib/createResponseError.js'
+import dbWritesPrevented from '../middlewares/dbWritesPrevented.js'
+import { isAuthenticated } from '../middlewares/isAuthenticated.js'
+import { generateToken } from '../services/jwt.js'
 import {
   createUser,
   deleteUser,
@@ -6,13 +11,8 @@ import {
   updateUser,
   validateUser
 } from '../services/users.js'
-import { generateToken } from '../services/jwt.js'
 import { isString, isValidUserInformation } from '../services/validate.js'
-import { isAuthenticated } from '../middlewares/isAuthenticated.js'
 import { internalServerErrorResponse } from './../lib/internalServerErrorResponse.js'
-import createResponseError from '../lib/createResponseError.js'
-import HttpError from '../enums/HttpError.js'
-import dbWritesPrevented from '../middlewares/dbWritesPrevented.js'
 
 const usersRouter = Router()
 
@@ -168,6 +168,30 @@ usersRouter.get('/', isAuthenticated, async (req, res) => {
 
     // Respond with 200 if the user was found.
     return res.status(200).json({ id, username, email, phonenumber })
+  } catch (error) {
+    internalServerErrorResponse(error, res)
+  }
+})
+
+usersRouter.get('/refresh-token', isAuthenticated, async (req, res) => {
+  try {
+    // Get the current user.
+    const reqUser = req.user
+
+    // Get the user.
+    const user = await getUser(reqUser.id)
+
+    // Respond with 404 if the user does not exist.
+    if (!user)
+      return res
+        .status(404)
+        .json(createResponseError(HttpError.NotFound, 'User does not exist'))
+
+    // Create a JWT token for the user.
+    const token = generateToken(user)
+
+    // Send the token.
+    res.status(200).json({ token })
   } catch (error) {
     internalServerErrorResponse(error, res)
   }
