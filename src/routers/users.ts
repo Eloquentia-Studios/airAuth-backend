@@ -2,7 +2,7 @@ import ErrorHandlingRouter from '../classes/ErrorHandlingRouter.js'
 import HttpError from '../enums/HttpError.js'
 import createResponseError from '../lib/createResponseError.js'
 import dbWritesPrevented from '../middlewares/dbWritesPrevented.js'
-import { isAuthenticated } from '../middlewares/isAuthenticated.js'
+import isAuthenticated from '../middlewares/isAuthenticated.js'
 import { generateToken } from '../services/jwt.js'
 import {
   createUser,
