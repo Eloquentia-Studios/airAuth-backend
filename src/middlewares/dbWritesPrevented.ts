@@ -4,7 +4,7 @@ import createResponseError from '../lib/createResponseError.js'
 import { dbWritesPaused } from '../services/pauseTraffic.js'
 
 /**
- * Check if database writes are paused currently
+ * Check if database writes are paused currently.
  *
  * @param req Express request object.
  * @param res Express response object.
@@ -19,6 +19,7 @@ const dbWritesPrevented: RequestHandler = async (req, res, next) => {
       res
     )
   }
+
   // Continue with the request.
   next()
 }
