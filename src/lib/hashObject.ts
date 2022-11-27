@@ -6,4 +6,6 @@ import { sha256 } from '../services/encryption.js'
  * @param obj Object to hash.
  * @returns Hash of the object.
  */
-export default (obj: any) => sha256(JSON.stringify(obj))
+const hashObject = (obj: any) => sha256(JSON.stringify(obj))
+
+export default hashObject
