@@ -1,3 +1,4 @@
+import { v4 as uuid } from 'uuid'
 import WebSocket, { WebSocketServer } from 'ws'
 import type { ListenerKeys, ListenerTypes } from '../types/ListenerTypes.d'
 import type {
@@ -6,10 +7,9 @@ import type {
   OverloadingSendMessageAll,
   OverloadingWithFunction
 } from '../types/Overload.d'
-import type { RemoteServer } from '../types/SyncConfiguration'
 import type SocketListeners from './../types/SocketListeners.d'
+import type { RemoteServer } from './config'
 import { getServerInfo } from './sync.js'
-import { v4 as uuid } from 'uuid'
 
 // Websocket server and connections.
 let wss: WebSocketServer | null = null

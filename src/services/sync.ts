@@ -1,21 +1,5 @@
 import fs from 'fs'
 import type WebSocket from 'ws'
-import {
-  connectToServers,
-  registerListener,
-  sendEvent,
-  sendMessage,
-  startWebsocket
-} from './websocket.js'
-import type { SyncConfiguration } from '../types/SyncConfiguration'
-import { syncConfiguration } from '../types/SyncConfiguration.js'
-import {
-  applyRecords,
-  getAllRecordHashes,
-  getRecord,
-  getRecords,
-  deleteRecord as deleteRecordFromDatabase
-} from './prisma.js'
 import arraysAreEqual from '../lib/arraysAreEqual.js'
 import type {
   RecordComparison,
@@ -28,7 +12,23 @@ import type {
   TableNamesList
 } from '../types/RecordHash.js'
 import DatabaseRecord from './../types/DatabaseRecord.d'
+import type { SyncConfiguration } from './config'
+import { syncConfiguration } from './config.js'
 import { dbWritesPaused, setDbWritesPaused } from './pauseTraffic.js'
+import {
+  applyRecords,
+  deleteRecord as deleteRecordFromDatabase,
+  getAllRecordHashes,
+  getRecord,
+  getRecords
+} from './prisma.js'
+import {
+  connectToServers,
+  registerListener,
+  sendEvent,
+  sendMessage,
+  startWebsocket
+} from './websocket.js'
 
 let configuration: SyncConfiguration
 

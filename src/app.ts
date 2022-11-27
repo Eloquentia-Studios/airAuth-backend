@@ -1,4 +1,4 @@
-import writeDefaultConfig from './lib/writeDefaultConfiguration.js'
+import { writeDefaultConfig } from './services/config.js'
 import { createServer } from './services/express.js'
 import { loadKeys } from './services/jwt.js'
 import { initSync } from './services/sync.js'

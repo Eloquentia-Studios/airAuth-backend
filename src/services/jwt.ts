@@ -2,7 +2,6 @@ import type { User } from '@prisma/client'
 import fs, { existsSync, mkdirSync, writeFileSync } from 'fs'
 import jwt from 'jsonwebtoken'
 import path from 'path'
-import generateKeys from '../lib/generateKeys.js'
 import { generateECDSAKeyPair } from '../services/encryption.js'
 import type TokenUserData from '../types/TokenData.d'
 
