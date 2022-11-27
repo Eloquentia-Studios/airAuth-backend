@@ -23,26 +23,20 @@ const defaultConfig: ServerConfiguration = {
 }
 
 /**
- * Write the default configuration file.
- *
- * @param path Path to write the file to.
+ * Remote server configuration schema.
  */
-export const writeDefaultConfig = (path: string) => {
-  // Check if the file already exists.
-  if (existsSync(path)) return
-
-  // Write the file.
-  writeFileSync(path, JSON.stringify(defaultConfig, null, 2))
-}
-
 export const remoteServer = z.object({
   name: z.string().min(1).max(100),
   address: z.string().min(1).max(100)
 })
 
+// Export the remote server type.
 export type RemoteServer = z.infer<typeof remoteServer>
 
 // TODO: Add custom error messages.
+/**
+ * Sync configuration schema.
+ */
 export const syncConfiguration = z.object({
   enabled: z.boolean(),
   server: z.object({
@@ -56,8 +50,25 @@ export const syncConfiguration = z.object({
   connectOnStart: z.boolean()
 })
 
+// Export the sync configuration type.
 export type SyncConfiguration = z.infer<typeof syncConfiguration>
 
+/**
+ * Export server configuration interface.
+ */
 export interface ServerConfiguration {
   sync: SyncConfiguration
+}
+
+/**
+ * Write the default configuration file.
+ *
+ * @param path Path to write the file to.
+ */
+export const writeDefaultConfig = (path: string) => {
+  // Check if the file already exists.
+  if (existsSync(path)) return
+
+  // Write the file.
+  writeFileSync(path, JSON.stringify(defaultConfig, null, 2))
 }
