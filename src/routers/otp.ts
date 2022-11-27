@@ -3,7 +3,7 @@ import HttpError from '../enums/HttpError.js'
 import createResponseError from '../lib/createResponseError.js'
 import dbWritesPrevented from '../middlewares/dbWritesPrevented.js'
 import isAuthenticated from '../middlewares/isAuthenticated.js'
-import { isOtpOwner } from '../middlewares/isOtpOwner.js'
+import isOtpOwner from '../middlewares/isOtpOwner.js'
 import { addOtp, deleteOtp, getOtps, updateOtp } from '../services/otp.js'
 import { isString } from '../services/validate.js'
 
