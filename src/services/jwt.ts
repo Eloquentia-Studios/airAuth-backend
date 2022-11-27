@@ -11,7 +11,7 @@ let publicKey: string | null = null
 /**
  * Load the private and public keys.
  */
-const loadKeys = async () => {
+export const loadKeys = async () => {
   // Key paths.
   const privateKeyPath = './config/pems/private.key'
   const publicKeyPath = './config/pems/public.key'
@@ -24,8 +24,6 @@ const loadKeys = async () => {
   privateKey = fs.readFileSync('./config/pems/private.key', 'utf8')
   publicKey = fs.readFileSync('./config/pems/public.key', 'utf8')
 }
-
-loadKeys()
 
 /**
  * Generate a JWT token for a user.
