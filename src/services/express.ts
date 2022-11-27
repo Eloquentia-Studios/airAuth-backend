@@ -39,7 +39,7 @@ const setupRoutes = (app: Express): void => {
   app.use('/api/v1/otp', otpRouter.getRouter())
 
   // Respond with 404 for all non-existing routes.
-  app.use((req, res) => {
-    res.status(404).json(createResponseError(HttpError.NotFound, 'Not found'))
-  })
+  app.use((req, res) =>
+    createResponseError(HttpError.NotFound, 'Not found', res)
+  )
 }

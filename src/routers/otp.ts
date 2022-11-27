@@ -69,9 +69,7 @@ otpRouter.post(
       errors.push('Label must be a string, if provided.')
 
     if (errors.length > 0)
-      return res
-        .status(400)
-        .json(createResponseError(HttpError.BadRequest, errors))
+      return createResponseError(HttpError.BadRequest, errors, res)
 
     // Update the OTP.
     await updateOtp(req.params.id, issuer, label)

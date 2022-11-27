@@ -31,9 +31,7 @@ usersRouter.post('/', dbWritesPrevented, async (req, res) => {
 
   // Respond with 400 if the user information is invalid.
   if (errors.length > 0)
-    return res
-      .status(400)
-      .json(createResponseError(HttpError.BadRequest, errors))
+    return createResponseError(HttpError.BadRequest, errors, res)
 
   // Create a new user.
   const { keyPair } = await createUser(username, email, password, phonenumber)
@@ -53,9 +51,7 @@ usersRouter.post('/login', async (req, res) => {
   if (!isString(password)) errors.push('Password must be a string')
 
   if (errors.length > 0)
-    return res
-      .status(400)
-      .json(createResponseError(HttpError.BadRequest, errors))
+    return createResponseError(HttpError.BadRequest, errors, res)
 
   // Validate the user.
   const user = await validateUser(identifier, password)
@@ -116,9 +112,7 @@ usersRouter.patch('/', isAuthenticated, dbWritesPrevented, async (req, res) => {
 
   // Respond with 400 if the user information is invalid.
   if (errors.length > 0)
-    return res
-      .status(400)
-      .json(createResponseError(HttpError.BadRequest, errors))
+    return createResponseError(HttpError.BadRequest, errors, res)
 
   // Update the user.
   await updateUser(reqUser.id, {
@@ -141,9 +135,7 @@ usersRouter.get('/', isAuthenticated, async (req, res) => {
 
   // Respond with 404 if the user does not exist.
   if (!user)
-    return res
-      .status(404)
-      .json(createResponseError(HttpError.NotFound, 'User does not exist'))
+    return createResponseError(HttpError.NotFound, 'User does not exist', res)
 
   // Extract the user's information.
   const { id, username, email, phonenumber } = user

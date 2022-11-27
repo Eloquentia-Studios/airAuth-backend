@@ -59,14 +59,11 @@ class ErrorHandlingRouter {
 
   private static internalServerErrorResponse(error: unknown, res: Response) {
     console.error(error)
-    res
-      .status(500)
-      .json(
-        createResponseError(
-          HttpError.InternalServerError,
-          'Unknown server error occurred'
-        )
-      )
+    return createResponseError(
+      HttpError.InternalServerError,
+      'Unknown server error occurred',
+      res
+    )
   }
 }
 
