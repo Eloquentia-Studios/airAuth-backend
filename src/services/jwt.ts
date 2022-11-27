@@ -5,8 +5,8 @@ import generateKeys from '../lib/generateKeys.js'
 import type TokenUserData from '../types/TokenData.d'
 
 // Private and public keys.
-let privateKey: string | null = null
-let publicKey: string | null = null
+let privateKey: string
+let publicKey: string
 
 /**
  * Load the private and public keys.
@@ -32,8 +32,8 @@ export const loadKeys = async () => {
  * @returns The JWT token.
  */
 export const generateToken = (user: User): string => {
-  // Check if the keys are loaded.
-  if (!privateKey || !publicKey) throw new Error('Keys not loaded')
+  // Verify that the keys are loaded.
+  keysLoaded()
 
   // Create a new JWT token.
   const token = jwt.sign(
@@ -57,10 +57,10 @@ export const generateToken = (user: User): string => {
  * @returns Token data if the token is valid, null otherwise.
  */
 export const verifyToken = (token: string): TokenUserData | null => {
-  // Check if the keys are loaded.
-  if (!privateKey || !publicKey) throw new Error('Keys not loaded')
-
   try {
+    // Verify that the keys are loaded.
+    keysLoaded()
+
     // Verify the token.
     const decoded = jwt.verify(token, publicKey, {
       algorithms: ['ES512']
@@ -72,4 +72,13 @@ export const verifyToken = (token: string): TokenUserData | null => {
     // Return null if the token is invalid.
     return null
   }
+}
+
+/**
+ * Verify that the keys are loaded.
+ *
+ * @throws Error if the keys are not loaded.
+ */
+const keysLoaded = () => {
+  if (!privateKey || !publicKey) throw new Error('Keys not loaded')
 }
