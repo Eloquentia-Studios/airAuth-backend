@@ -5,13 +5,20 @@ import dbWritesPrevented from '../middlewares/dbWritesPrevented.js'
 import isAuthenticated from '../middlewares/isAuthenticated.js'
 import isOtpOwner from '../middlewares/isOtpOwner.js'
 import { addOtp, deleteOtp, getOtps, updateOtp } from '../services/otp.js'
-import { isString } from '../services/validate.js'
+import { isString, isValidIssuerLabel } from '../services/validate.js'
 
 const otpRouter = new ErrorHandlingRouter()
 
 // Handle POST /api/v1/otp requests to add a new OTP.
 otpRouter.post('/', isAuthenticated, dbWritesPrevented, async (req, res) => {
-  const { otpurl } = req.body
+  // Get and validate the otp url.
+  const { otpurl } = req.body as { otpurl: string }
+  if (!isString(otpurl))
+    return createResponseError(
+      HttpError.BadRequest,
+      'Otp url must be a string',
+      res
+    )
 
   // Add the OTP to the database.
   const otp = await addOtp(otpurl, req.user.id)
@@ -59,15 +66,11 @@ otpRouter.post(
   isOtpOwner,
   dbWritesPrevented,
   async (req, res) => {
+    // Get the issuer and label from the request body.
     const { issuer, label } = req.body
 
-    const errors = []
-
-    if (!isString(issuer) && issuer !== null && issuer !== undefined)
-      errors.push('Issuer must be a string, if provided.')
-    if (!isString(label) && label !== null && label !== undefined)
-      errors.push('Label must be a string, if provided.')
-
+    // Validate the issuer and label.
+    const errors = isValidIssuerLabel(issuer, label)
     if (errors.length > 0)
       return createResponseError(HttpError.BadRequest, errors, res)
 

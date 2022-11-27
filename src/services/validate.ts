@@ -2,66 +2,24 @@ import validator from 'validator'
 import { getUser } from './users.js'
 
 /**
- * Checks if the given value is a valid username.
+ * Check if issuer and label values are either valid strings or null or undefined.
  *
- * @param username Value to validate.
- * @returns True if the value is a valid username.
+ * @param issuer Custom issuer name.
+ * @param label Custom label name.
+ * @returns True if the values are valid, false otherwise.
  */
-export const isValidUsername = (username: string): boolean => {
-  return (
-    isString(username) &&
-    validator.isLength(username, { min: 3, max: 40 }) &&
-    validator.isAlphanumeric(username)
-  )
-}
+export const isValidIssuerLabel = (issuer: any, label: any): string[] => {
+  const errors = []
 
-/**
- * Checks if the given value is a valid email.
- *
- * @param email Value to validate.
- * @returns True if the value is a valid email.
- */
-export const isValidEmail = (email: string): boolean => {
-  return isString(email) && validator.isEmail(email)
-}
+  if (!isString(issuer) && !isNullOrUndefined(issuer)) {
+    errors.push('Invalid issuer.')
+  }
 
-/**
- * Checks if the given value is a valid phone number.
- *
- * @param phonenumber Value to validate.
- * @returns True if the value is a valid phone number.
- */
-export const isValidPhoneNumber = (phonenumber: string): boolean => {
-  return isString(phonenumber) && validator.isMobilePhone(phonenumber)
-}
+  if (!isString(label) && !isNullOrUndefined(label)) {
+    errors.push('Invalid label.')
+  }
 
-/**
- * Checks if the given value is a valid password.
- *
- * @param password Value to validate.
- * @returns True if the value is a valid password.
- */
-export const isValidPassword = (password: string): boolean => {
-  return (
-    isString(password) &&
-    validator.isStrongPassword(password, {
-      minLength: 10,
-      minLowercase: 1,
-      minUppercase: 1,
-      minNumbers: 1,
-      minSymbols: 1
-    })
-  )
-}
-
-/**
- * Checks if the given value is a string.
- *
- * @param value Value to check.
- * @returns True if the value is a string.
- */
-export const isString = (value: string): boolean => {
-  return typeof value === 'string'
+  return errors
 }
 
 /**
@@ -150,4 +108,71 @@ export const isValidUserInformation = async (
     errors.push('Phone number already exists.')
   }
   return errors
+}
+
+/**
+ * Checks if the given value is a valid username.
+ *
+ * @param username Value to validate.
+ * @returns True if the value is a valid username.
+ */
+export const isValidUsername = (username: string): boolean => {
+  return (
+    isString(username) &&
+    validator.isLength(username, { min: 3, max: 40 }) &&
+    validator.isAlphanumeric(username)
+  )
+}
+
+/**
+ * Checks if the given value is a valid email.
+ *
+ * @param email Value to validate.
+ * @returns True if the value is a valid email.
+ */
+export const isValidEmail = (email: string): boolean => {
+  return isString(email) && validator.isEmail(email)
+}
+
+/**
+ * Checks if the given value is a valid phone number.
+ *
+ * @param phonenumber Value to validate.
+ * @returns True if the value is a valid phone number.
+ */
+export const isValidPhoneNumber = (phonenumber: string): boolean => {
+  return isString(phonenumber) && validator.isMobilePhone(phonenumber)
+}
+
+/**
+ * Checks if the given value is a valid password.
+ *
+ * @param password Value to validate.
+ * @returns True if the value is a valid password.
+ */
+export const isValidPassword = (password: string): boolean => {
+  return (
+    isString(password) &&
+    validator.isStrongPassword(password, {
+      minLength: 10,
+      minLowercase: 1,
+      minUppercase: 1,
+      minNumbers: 1,
+      minSymbols: 1
+    })
+  )
+}
+
+export const isNullOrUndefined = (value: any): boolean => {
+  return value === null || value === undefined
+}
+
+/**
+ * Checks if the given value is a string.
+ *
+ * @param value Value to check.
+ * @returns True if the value is a string.
+ */
+export const isString = (value: string): boolean => {
+  return typeof value === 'string'
 }
