@@ -97,11 +97,13 @@ export const updateOtp = async (
   issuer?: string | null,
   label?: string | null
 ): Promise<Otp> => {
+  // Create a new object from the old one with the updated fields.
   const newOtpData = createUpdatedPrismaObject(await getOtp(id), {
     issuer,
     label
   })
 
+  // Update the OTP in the database.
   const updatedOtp = await prisma.otp.update({
     where: {
       id
