@@ -74,20 +74,13 @@ export const generateEncryptedKeyPair = async (
  * @returns Encrypted data.
  */
 export const symmetricEncrypt = async (data: any, key: string) => {
-  if (!process.env.CIPHER_IV) throw new Error('Cipher IV not set')
-  const keystr = crypto
-    .createHash('sha256')
-    .update(key)
-    .digest('base64')
-    .substring(0, 32)
-  const cipher = crypto.createCipheriv(
-    'aes-256-gcm',
-    keystr,
-    process.env.CIPHER_IV
-  )
+  const keyString = createKeyString(key)
+  const cipher = createCipher(keyString)
+
   const encrypted = cipher.update(data, 'utf8', 'hex')
   const final = cipher.final('hex')
   const auth = cipher.getAuthTag().toString('hex')
+
   return `${encrypted}${final} auth ${auth}`
 }
 
@@ -99,4 +92,32 @@ export const symmetricEncrypt = async (data: any, key: string) => {
  */
 export const sha256 = (data: string) => {
   return crypto.createHash('sha256').update(data).digest('hex')
+}
+
+/**
+ * Create a key string.
+ *
+ * @param key Encryption key.
+ * @returns Key string.
+ */
+const createKeyString = (key: string): string => {
+  return crypto
+    .createHash('sha256')
+    .update(key)
+    .digest('base64')
+    .substring(0, 32)
+}
+
+/**
+ * Create a aes-256-gcm cipher.
+ *
+ * @param keyString Key string.
+ * @returns Cipher IV and cipher.
+ */
+const createCipher = (keyString: string) => {
+  // Check for IV in environment variables.
+  if (!process.env.CIPHER_IV) throw new Error('Cipher IV not set')
+
+  // Create and return cipher.
+  return crypto.createCipheriv('aes-256-gcm', keyString, process.env.CIPHER_IV)
 }
