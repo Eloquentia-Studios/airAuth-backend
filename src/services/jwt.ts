@@ -6,8 +6,8 @@ import { generateECDSAKeyPair } from '../services/encryption.js'
 import type TokenUserData from '../types/TokenData.d'
 
 // Private and public keys.
-let privateKey: string | null = null
-let publicKey: string | null = null
+let privateKey: string
+let publicKey: string
 
 /**
  * Load the private and public keys.
@@ -27,38 +27,6 @@ export const loadKeys = async () => {
 }
 
 /**
- * Generate private and public keys for JWT signing.
- *
- * @param privateKeyPath Path to write the private key to.
- * @param publicKeyPath Path to write the public key to.
- */
-const generateKeys = async (privateKeyPath: string, publicKeyPath: string) => {
-  // Print disclaimer.
-  console.log('Generating new keys for user authentication...')
-  console.log('Make sure to keep the private key safe!')
-  console.log(
-    'IMPORTANT: If you lose the private key, you will not be able to verify user tokens!'
-  )
-  console.log(
-    'If you intend to use server sync, you will have to use the same keys on all servers!'
-  )
-
-  // Generate a new key pair.
-  const keys = await generateECDSAKeyPair()
-
-  // Check if directory exists, otherwise create it.
-  const dir = path.dirname(privateKeyPath)
-  if (!existsSync(dir)) mkdirSync(dir)
-
-  // Write the keys to the given paths.
-  writeFileSync(privateKeyPath, keys.privateKey)
-  writeFileSync(publicKeyPath, keys.publicKey)
-
-  // Print success message.
-  console.log('Keys generated successfully!')
-}
-
-/**
  * Generate a JWT token for a user.
  *
  * @param user User to create a token for.
@@ -66,7 +34,7 @@ const generateKeys = async (privateKeyPath: string, publicKeyPath: string) => {
  */
 export const generateToken = (user: User): string => {
   // Check if the keys are loaded.
-  if (!privateKey || !publicKey) throw new Error('Keys not loaded')
+  keysLoaded()
 
   // Create a new JWT token.
   const token = jwt.sign(
@@ -76,7 +44,7 @@ export const generateToken = (user: User): string => {
     privateKey,
     {
       algorithm: 'ES512',
-      expiresIn: '7d'
+      expiresIn: process.env.JWT_EXPIRATION || '7d'
     }
   )
 
@@ -91,7 +59,7 @@ export const generateToken = (user: User): string => {
  */
 export const verifyToken = (token: string): TokenUserData | null => {
   // Check if the keys are loaded.
-  if (!privateKey || !publicKey) throw new Error('Keys not loaded')
+  keysLoaded()
 
   try {
     // Verify the token.
@@ -105,4 +73,57 @@ export const verifyToken = (token: string): TokenUserData | null => {
     // Return null if the token is invalid.
     return null
   }
+}
+
+/**
+ * Generate private and public keys for JWT signing.
+ *
+ * @param privateKeyPath Path to write the private key to.
+ * @param publicKeyPath Path to write the public key to.
+ */
+const generateKeys = async (privateKeyPath: string, publicKeyPath: string) => {
+  // Print information about key generation.
+  printKeyGenerationInfo()
+
+  // Generate a new key pair.
+  const keys = await generateECDSAKeyPair()
+
+  // Check if directory exists, otherwise create it.
+  const dir = path.dirname(privateKeyPath)
+  if (!existsSync(dir)) mkdirSync(dir)
+
+  // Write the keys to the given paths.
+  writeFileSync(privateKeyPath, keys.privateKey)
+  writeFileSync(publicKeyPath, keys.publicKey)
+
+  // Print a success message.
+  printKeyGenerationSuccess()
+}
+
+/**
+ * Print information about key generation.
+ */
+const printKeyGenerationInfo = () => {
+  console.log('Generating new keys for user authentication...')
+  console.log('Make sure to keep the private key safe!')
+  console.log(
+    'IMPORTANT: If you lose the private key, you will not be able to verify user tokens!'
+  )
+  console.log(
+    'If you intend to use server sync, you will have to use the same keys on all servers!'
+  )
+}
+
+/**
+ * Print a success message after key generation.
+ */
+const printKeyGenerationSuccess = () => {
+  console.log('Keys generated successfully!')
+}
+
+/**
+ * Check if the keys are loaded.
+ */
+const keysLoaded = () => {
+  if (!privateKey || !publicKey) throw new Error('Keys not loaded')
 }
