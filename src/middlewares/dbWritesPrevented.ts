@@ -1,7 +1,7 @@
 import type { RequestHandler } from 'express'
 import HttpError from '../enums/HttpError.js'
+import { dbWritesPaused } from '../global/pauseTraffic.js'
 import createResponseError from '../lib/createResponseError.js'
-import { dbWritesPaused } from '../services/pauseTraffic.js'
 
 /**
  * Check if database writes are paused currently.

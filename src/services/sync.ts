@@ -1,5 +1,6 @@
 import fs from 'fs'
 import type WebSocket from 'ws'
+import { dbWritesPaused, setDbWritesPaused } from '../global/pauseTraffic.js'
 import arraysAreEqual from '../lib/arraysAreEqual.js'
 import type {
   RecordComparison,
@@ -14,7 +15,6 @@ import type {
 import DatabaseRecord from './../types/DatabaseRecord.d'
 import type { SyncConfiguration } from './config'
 import { syncConfiguration } from './config.js'
-import { dbWritesPaused, setDbWritesPaused } from './pauseTraffic.js'
 import {
   applyRecords,
   deleteRecord as deleteRecordFromDatabase,
