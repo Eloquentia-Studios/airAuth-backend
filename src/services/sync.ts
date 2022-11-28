@@ -45,9 +45,10 @@ const tableSyncPriority: {
  * Initialize the sync service.
  */
 export const initSync = () => {
+  // Load the configuration.
   const configPath = process.env.CONFIG_PATH || './config/config.json'
   const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))
-  configuration = config.sync as SyncConfiguration
+  configuration = config.sync
 
   // Check configuration validity.
   const result = syncConfiguration.safeParse(configuration)
