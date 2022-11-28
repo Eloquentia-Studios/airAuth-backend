@@ -23,45 +23,15 @@ export const isValidIssuerLabel = (issuer: any, label: any): string[] => {
 }
 
 /**
- * Checks if the given value is a valid OTP URL.
+ * Check if values are valid user information.
  *
- * @param url Value to validate.
- * @returns True if the value is a valid OTP URL.
+ * @param username Username to check.
+ * @param email Email to check.
+ * @param phonenumber Phonenumber to check.
+ * @param password Password to check.
+ * @param partialAllowed If partial information is allowed.
+ * @returns True if the values are valid, false otherwise.
  */
-export const isValidOtpUrl = (url: string): boolean => {
-  // Check that it is string
-  if (!isString(url)) return false
-
-  // Check structure of the URL.
-  if (!url.match(/^otpauth:\/\/(totp)(\/(([^:?]+)(:([^:?]*))?))?\?(.+)$/gi))
-    return false
-
-  // Check that it has a secret.
-  if (!url.match(/secret=([^&]+)&/gi)) return false
-
-  // Check all the other parameters.
-  const otp = new URL(url)
-  const allowedParams = ['secret', 'issuer', 'algorithm', 'digits', 'period']
-  for (const param of otp.searchParams.keys()) {
-    if (!allowedParams.includes(param)) return false
-  }
-
-  // Check that the algorithm is valid.
-  const algorithm = otp.searchParams.get('algorithm')
-  if (algorithm && !['SHA1', 'SHA256', 'SHA512'].includes(algorithm))
-    return false
-
-  // Check that the digits is valid.
-  const digits = otp.searchParams.get('digits')
-  if (digits && !['6', '8'].includes(digits)) return false
-
-  // Check that the period is valid.
-  const period = otp.searchParams.get('period')
-  if (period && !['30', '60', '90'].includes(period)) return false
-
-  return true
-}
-
 export const isValidUserInformation = async (
   username: string,
   email: string,
@@ -193,6 +163,12 @@ export const isValidPassword = (password: string): boolean => {
   )
 }
 
+/**
+ * Checks if the given value is null or undefined.
+ *
+ * @param value Value to check.
+ * @returns True if the value is null or undefined, false otherwise.
+ */
 export const isNullOrUndefined = (value: any): boolean => {
   return value === null || value === undefined
 }
