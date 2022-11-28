@@ -1,10 +1,10 @@
-import type { User, KeyPair } from '@prisma/client'
+import type { KeyPair, User } from '@prisma/client'
+import argon2 from 'argon2'
 import createUpdatedPrismaObject from '../lib/createUpdatedPrismaObject.js'
 import hashObject from '../lib/hashObject.js'
 import type { RecordHash } from '../types/RecordHash.d'
 import type UserUpdates from '../types/UserUpdates.d'
 import { generateEncryptedKeyPair } from './encryption.js'
-import { hashPassword, verifyPassword } from './password.js'
 import prisma from './prisma.js'
 import { updateRecord } from './sync.js'
 
@@ -15,6 +15,7 @@ import { updateRecord } from './sync.js'
  * @param email Email to check.
  * @param phonenumber Phone number to check.
  * @param password Password to check.
+ *
  * @returns True if the user information is valid.
  * @throws Error if the user could not be created.
  */
@@ -188,4 +189,28 @@ export const getKeypairHashes = async (): Promise<RecordHash[]> => {
       hash: true
     }
   })
+}
+
+/**
+ * Hash a password.
+ *
+ * @param password Password to hash.
+ * @returns Hashed password.
+ */
+const hashPassword = async (password: string): Promise<string> => {
+  return await argon2.hash(password)
+}
+
+/**
+ * Verify a password.
+ *
+ * @param password Password to check.
+ * @param hash Hashed password.
+ * @returns True if the password is correct.
+ */
+const verifyPassword = async (
+  password: string,
+  hash: string
+): Promise<boolean> => {
+  return await argon2.verify(hash, password)
 }
