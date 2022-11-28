@@ -25,11 +25,9 @@ export const createUser = async (
   password: string,
   phonenumber?: string
 ): Promise<User & { keyPair: KeyPair }> => {
-  // Hash the password.
+  // Check phonenumber and hash password.
+  phonenumber = phonenumber || undefined // TODO: Figure out a better way to do this.
   const passwordHash = await hashPassword(password)
-
-  // Check if the phonenumber is not set.
-  phonenumber = phonenumber || undefined
 
   // Generate a keypair for the user.
   const keypair = await generateEncryptedKeyPair(password)
@@ -65,6 +63,12 @@ export const createUser = async (
   return user
 }
 
+/**
+ * Get a user by their identifier.
+ *
+ * @param identifier The user's identifier.
+ * @returns The user or null if the user does not exist.
+ */
 export const getUser = async (
   identifier: string
 ): Promise<(User & { keyPair: KeyPair }) | null> => {
@@ -81,6 +85,7 @@ export const getUser = async (
       keyPair: true
     }
   })) as User & { keyPair: KeyPair }
+
   return user
 }
 
