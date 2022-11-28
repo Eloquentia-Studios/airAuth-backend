@@ -75,6 +75,7 @@ export const generateEncryptedKeyPair = async (
  */
 export const symmetricEncrypt = async (data: any, key: string) => {
   const keyString = createKeyString(key)
+
   const cipher = createCipher(keyString)
 
   const encrypted = cipher.update(data, 'utf8', 'hex')
