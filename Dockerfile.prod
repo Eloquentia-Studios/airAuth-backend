@@ -1,14 +1,44 @@
-FROM node:18.9.0
+# Build the application
+FROM node:18 as ts-compiler
 
 WORKDIR /app
 
-COPY package.json ./
+COPY package*.json ./
+COPY tsconfig*.json ./
+COPY ./prisma ./prisma
 
 RUN npm install
 
-COPY . .
+COPY . ./
+
+RUN npm run build
+
+# Create new image without typescript files, needed to avoid prisma generate and be able to use alpine
+FROM node:18 as ts-remover
+
+WORKDIR /app
+
+COPY --from=ts-compiler /app/package*.json ./
+COPY --from=ts-compiler /app/dist ./dist
+COPY --from=ts-compiler /app/prisma ./prisma
+
+RUN npm install --only=production
+# Could not run prisma generate on alpine as it needs openssl (which I could not install on it using apk). So we run it on the node image
+RUN npx prisma generate
+
+# Create alpine image with all application files, but no dev dependencies
+FROM node:18
+
+WORKDIR /app
+
+COPY --from=ts-remover /app/package*.json ./
+COPY --from=ts-remover /app/dist ./dist
+COPY --from=ts-remover /app/prisma ./prisma
+COPY --from=ts-remover /app/node_modules ./node_modules
+
+RUN npm install --only=production
 
 EXPOSE 8080
 EXPOSE 7070
 
-CMD echo "Sleeping for 10 seconds to ensure database has started.";/bin/sleep 10;npx prisma migrate deploy;npx prisma generate;npm run build;npm run start
+CMD echo "Sleeping for 10 seconds to ensure database has started.";/bin/sleep 10;npx prisma migrate deploy;npm run start
