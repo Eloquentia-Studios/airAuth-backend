@@ -60,8 +60,10 @@ export const generateToken = (user: User): string => {
 export const verifyToken = (token: string): TokenUserData | null => {
   // Check if the keys are loaded.
   keysLoaded()
-
   try {
+    // Verify that the keys are loaded.
+    keysLoaded()
+
     // Verify the token.
     const decoded = jwt.verify(token, publicKey, {
       algorithms: ['ES512']
@@ -123,6 +125,9 @@ const printKeyGenerationSuccess = () => {
 
 /**
  * Check if the keys are loaded.
+ * Verify that the keys are loaded.
+ *
+ * @throws Error if the keys are not loaded.
  */
 const keysLoaded = () => {
   if (!privateKey || !publicKey) throw new Error('Keys not loaded')

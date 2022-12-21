@@ -1,4 +1,4 @@
-FROM node:18.9.0
+FROM node:18
 
 WORKDIR /app
 
@@ -9,5 +9,6 @@ RUN npm install
 COPY . .
 
 EXPOSE 8080
+EXPOSE 7070
 
 CMD echo "Sleeping for 10 seconds to ensure database has started.";/bin/sleep 10;npx prisma migrate deploy;npx prisma generate;npm run dev -- --legacy-watch --polling-interval=1000
