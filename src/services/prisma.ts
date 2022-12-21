@@ -1,7 +1,11 @@
 import Prisma from '@prisma/client'
-import type { RecordHashes, TableNames } from '../types/RecordHash.d'
-import type { TableNamesList } from '../types/RecordHash.d'
 import type DatabaseRecord from '../types/DatabaseRecord.d'
+import type {
+  RecordHashes,
+  TableNames,
+  TableNamesList
+} from '../types/RecordHash.d'
+import memoize from './../lib/memoize.js'
 
 const prisma = new Prisma.PrismaClient()
 export default prisma
@@ -12,8 +16,9 @@ export default prisma
  * @returns Record hashes.
  */
 export const getAllRecordHashes = async () => {
-  const modelNames = await getAllModels()
+  const modelNames = getAllModels()
   const recordHashes: RecordHashes = {}
+
   await Promise.all(
     modelNames.map(async (modelName) => {
       // @ts-ignore - Prisma model names are dynamic.
@@ -25,6 +30,7 @@ export const getAllRecordHashes = async () => {
       })
     })
   )
+
   return recordHashes
 }
 
@@ -99,16 +105,12 @@ export const deleteRecord = async (tableName: TableNames, id: string) => {
   })
 }
 
-let modelNames: TableNamesList = []
-
 /**
  * Get all prisma model names.
  */
-const getAllModels = async (): Promise<TableNamesList> => {
-  if (modelNames.length > 0) return modelNames
+const getAllModels = memoize<TableNamesList>(() => {
   const allProperties = Object.keys(prisma)
-  modelNames = allProperties.filter(
+  return allProperties.filter(
     (property) => !property.startsWith('_')
   ) as TableNamesList
-  return modelNames
-}
+})

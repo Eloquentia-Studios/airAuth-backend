@@ -1,13 +1,16 @@
 /**
- * Create an object for updating a Prisma object.
+ * Create a new Prisma record with the same properties as the original, but with the updated properties
+ * from the update object, excluding createdAt and updatedAt.
  *
  * @param oldData Old data.
  * @param newData New data.
- * @returns Object for updating a Prisma object.
+ * @returns Object for updating a Prisma record.
  */
-export default (oldData: any, newData: any) => ({
+const createUpdatedPrismaObject = (oldData: any, newData: any) => ({
   ...oldData,
   ...newData,
   createdAt: undefined,
   updatedAt: undefined
 })
+
+export default createUpdatedPrismaObject

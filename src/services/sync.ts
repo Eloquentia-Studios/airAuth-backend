@@ -1,21 +1,6 @@
 import fs from 'fs'
 import type WebSocket from 'ws'
-import {
-  connectToServers,
-  registerListener,
-  sendEvent,
-  sendMessage,
-  startWebsocket
-} from './websocket.js'
-import type { SyncConfiguration } from '../types/SyncConfiguration'
-import { syncConfiguration } from '../types/SyncConfiguration.js'
-import {
-  applyRecords,
-  getAllRecordHashes,
-  getRecord,
-  getRecords,
-  deleteRecord as deleteRecordFromDatabase
-} from './prisma.js'
+import { dbWritesPaused, setDbWritesPaused } from '../global/pauseTraffic.js'
 import arraysAreEqual from '../lib/arraysAreEqual.js'
 import type {
   RecordComparison,
@@ -28,7 +13,22 @@ import type {
   TableNamesList
 } from '../types/RecordHash.js'
 import DatabaseRecord from './../types/DatabaseRecord.d'
-import { dbWritesPaused, setDbWritesPaused } from './pauseTraffic.js'
+import type { SyncConfiguration } from './config'
+import { syncConfiguration } from './config.js'
+import {
+  applyRecords,
+  deleteRecord as deleteRecordFromDatabase,
+  getAllRecordHashes,
+  getRecord,
+  getRecords
+} from './prisma.js'
+import {
+  connectToServers,
+  registerListener,
+  sendEvent,
+  sendMessage,
+  startWebsocket
+} from './websocket.js'
 
 let configuration: SyncConfiguration
 
@@ -45,9 +45,10 @@ const tableSyncPriority: {
  * Initialize the sync service.
  */
 export const initSync = () => {
+  // Load the configuration.
   const configPath = process.env.CONFIG_PATH || './config/config.json'
   const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))
-  configuration = config.sync as SyncConfiguration
+  configuration = config.sync
 
   // Check configuration validity.
   const result = syncConfiguration.safeParse(configuration)

@@ -1,7 +1,8 @@
 import type { User } from '@prisma/client'
-import fs from 'fs'
+import fs, { existsSync, mkdirSync, writeFileSync } from 'fs'
 import jwt from 'jsonwebtoken'
-import generateKeys from '../lib/generateKeys.js'
+import path from 'path'
+import { generateECDSAKeyPair } from '../services/encryption.js'
 import type TokenUserData from '../types/TokenData.d'
 
 // Private and public keys.
@@ -32,7 +33,7 @@ export const loadKeys = async () => {
  * @returns The JWT token.
  */
 export const generateToken = (user: User): string => {
-  // Verify that the keys are loaded.
+  // Check if the keys are loaded.
   keysLoaded()
 
   // Create a new JWT token.
@@ -43,7 +44,7 @@ export const generateToken = (user: User): string => {
     privateKey,
     {
       algorithm: 'ES512',
-      expiresIn: '7d'
+      expiresIn: process.env.JWT_EXPIRATION || '7d'
     }
   )
 
@@ -57,6 +58,8 @@ export const generateToken = (user: User): string => {
  * @returns Token data if the token is valid, null otherwise.
  */
 export const verifyToken = (token: string): TokenUserData | null => {
+  // Check if the keys are loaded.
+  keysLoaded()
   try {
     // Verify that the keys are loaded.
     keysLoaded()
@@ -75,6 +78,53 @@ export const verifyToken = (token: string): TokenUserData | null => {
 }
 
 /**
+ * Generate private and public keys for JWT signing.
+ *
+ * @param privateKeyPath Path to write the private key to.
+ * @param publicKeyPath Path to write the public key to.
+ */
+const generateKeys = async (privateKeyPath: string, publicKeyPath: string) => {
+  // Print information about key generation.
+  printKeyGenerationInfo()
+
+  // Generate a new key pair.
+  const keys = await generateECDSAKeyPair()
+
+  // Check if directory exists, otherwise create it.
+  const dir = path.dirname(privateKeyPath)
+  if (!existsSync(dir)) mkdirSync(dir)
+
+  // Write the keys to the given paths.
+  writeFileSync(privateKeyPath, keys.privateKey)
+  writeFileSync(publicKeyPath, keys.publicKey)
+
+  // Print a success message.
+  printKeyGenerationSuccess()
+}
+
+/**
+ * Print information about key generation.
+ */
+const printKeyGenerationInfo = () => {
+  console.log('Generating new keys for user authentication...')
+  console.log('Make sure to keep the private key safe!')
+  console.log(
+    'IMPORTANT: If you lose the private key, you will not be able to verify user tokens!'
+  )
+  console.log(
+    'If you intend to use server sync, you will have to use the same keys on all servers!'
+  )
+}
+
+/**
+ * Print a success message after key generation.
+ */
+const printKeyGenerationSuccess = () => {
+  console.log('Keys generated successfully!')
+}
+
+/**
+ * Check if the keys are loaded.
  * Verify that the keys are loaded.
  *
  * @throws Error if the keys are not loaded.

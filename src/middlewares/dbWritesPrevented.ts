@@ -1,10 +1,10 @@
 import type { RequestHandler } from 'express'
 import HttpError from '../enums/HttpError.js'
+import { dbWritesPaused } from '../global/pauseTraffic.js'
 import createResponseError from '../lib/createResponseError.js'
-import { dbWritesPaused } from '../services/pauseTraffic.js'
 
 /**
- * Check if database writes are paused currently
+ * Check if database writes are paused currently.
  *
  * @param req Express request object.
  * @param res Express response object.
@@ -13,15 +13,13 @@ import { dbWritesPaused } from '../services/pauseTraffic.js'
 const dbWritesPrevented: RequestHandler = async (req, res, next) => {
   // Check if writes are paused.
   if (dbWritesPaused()) {
-    return res
-      .status(503)
-      .json(
-        createResponseError(
-          HttpError.ServiceUnavailable,
-          'Database writes are currently paused.'
-        )
-      )
+    return createResponseError(
+      HttpError.ServiceUnavailable,
+      'Database writes are currently paused.',
+      res
+    )
   }
+
   // Continue with the request.
   next()
 }

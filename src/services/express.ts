@@ -1,9 +1,9 @@
-import express from 'express'
-import usersRouter from '../routers/users.js'
-import otpRouter from '../routers/otp.js'
 import type { Express } from 'express'
-import createResponseError from '../lib/createResponseError.js'
+import express from 'express'
 import HttpError from '../enums/HttpError.js'
+import createResponseError from '../lib/createResponseError.js'
+import otpRouter from '../routers/otp.js'
+import usersRouter from '../routers/users.js'
 
 /**
  * Create a new Express server and run the automatic setup.
@@ -35,11 +35,11 @@ const setupGlobalMiddleware = (app: Express): void => {
  */
 const setupRoutes = (app: Express): void => {
   // Setup the users router.
-  app.use('/api/v1/user', usersRouter)
-  app.use('/api/v1/otp', otpRouter)
+  app.use('/api/v1/user', usersRouter.getRouter())
+  app.use('/api/v1/otp', otpRouter.getRouter())
 
   // Respond with 404 for all non-existing routes.
-  app.use((req, res) => {
-    res.status(404).json(createResponseError(HttpError.NotFound, 'Not found'))
-  })
+  app.use((req, res) =>
+    createResponseError(HttpError.NotFound, 'Not found', res)
+  )
 }
