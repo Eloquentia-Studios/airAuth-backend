@@ -197,7 +197,7 @@ const setupSyncWebsocket = () => {
 
   // Connect to remote servers.
   if (configuration.connectOnStart) {
-    connectToServers(configuration.servers)
+    connectToServers(configuration.servers, configuration.ssl)
   }
 }
 

@@ -12,9 +12,10 @@ const defaultConfig: ServerConfiguration = {
     servers: [
       {
         name: 'SECOND-SERVER-NAME',
-        address: 'http://server.two:7070'
+        address: 'server.two:7070'
       }
     ],
+    ssl: false,
     fullSyncInterval: 30,
     secret: 'THIS-SHOULD-BE-RANDOMLY-GENERATED',
     startDelay: 0,
@@ -43,6 +44,7 @@ export const syncConfiguration = z.object({
     name: z.string().min(1).max(100),
     port: z.number().int().min(1).max(65535)
   }),
+  ssl: z.boolean(),
   servers: z.array(remoteServer).max(1),
   fullSyncInterval: z.number().int().min(0).max(1440), // 0 = disabled
   secret: z.string().min(15).max(512),
