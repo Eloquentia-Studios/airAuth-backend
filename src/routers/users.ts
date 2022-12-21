@@ -155,9 +155,7 @@ usersRouter.get('/refresh-token', isAuthenticated, async (req, res) => {
 
   // Respond with 404 if the user does not exist.
   if (!user)
-    return res
-      .status(404)
-      .json(createResponseError(HttpError.NotFound, 'User does not exist', res))
+    return createResponseError(HttpError.NotFound, 'User does not exist', res)
 
   // Create a JWT token for the user.
   const token = generateToken(user)
