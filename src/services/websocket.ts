@@ -98,9 +98,9 @@ export const startWebsocket = (port: number) => {
  *
  * @param servers Array of remote servers.
  */
-export const connectToServers = (servers: RemoteServer[]) => {
+export const connectToServers = (servers: RemoteServer[], ssl: boolean) => {
   for (const server of servers) {
-    connectToServer(server)
+    connectToServer(server, ssl)
   }
 }
 
@@ -109,10 +109,15 @@ export const connectToServers = (servers: RemoteServer[]) => {
  *
  * @param server Remote server.
  */
-export const connectToServer = (server: RemoteServer) => {
-  const ws = new WebSocket(`ws://${server.address}`)
+export const connectToServer = (server: RemoteServer, ssl: boolean) => {
+  const protocol = ssl ? 'wss' : 'ws'
+  const setProtocol = server.address.split('://')[0]
+  if (setProtocol !== protocol && setProtocol.length <= 3)
+    return console.log('Invalid protocol for server in config:', server.name)
+  if (setProtocol.length > 3) server.address = protocol + '://' + server.address
 
   // Handle connection open.
+  const ws = new WebSocket(server.address)
   ws.onopen = () => {
     if (checkAndAddConnection(server.name, ws)) {
       invokeListeners('connection', 'established', ws, null)
