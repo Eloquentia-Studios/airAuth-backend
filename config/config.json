@@ -17,5 +17,5 @@
     "startDelay": 0,
     "connectOnStart": true
   },
-  "debug": false
+  "debug": true
 }

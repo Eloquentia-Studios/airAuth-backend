@@ -14,7 +14,6 @@ import type {
 } from '../types/RecordHash.js'
 import DatabaseRecord from './../types/DatabaseRecord.d'
 import type { SyncConfiguration } from './config'
-import { syncConfiguration } from './config.js'
 import {
   applyRecords,
   deleteRecord as deleteRecordFromDatabase,
@@ -45,15 +44,7 @@ const tableSyncPriority: {
  * Initialize the sync service.
  */
 export const initSync = () => {
-  // Load the configuration.
   configuration = serverConfig.sync
-
-  // Check configuration validity.
-  const result = syncConfiguration.safeParse(configuration)
-  if (!result.success) {
-    console.error(result.error)
-    throw new Error('Sync configuration is invalid')
-  }
 
   // Check if the sync service is enabled.
   if (!configuration.enabled) return console.log('Sync service is disabled.')
