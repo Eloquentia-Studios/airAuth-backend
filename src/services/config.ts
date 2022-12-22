@@ -1,4 +1,4 @@
-import { existsSync, writeFileSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { z } from 'zod'
 
 // Define the default configuration.
@@ -20,7 +20,8 @@ const defaultConfig: ServerConfiguration = {
     secret: 'THIS-SHOULD-BE-RANDOMLY-GENERATED',
     startDelay: 0,
     connectOnStart: true
-  }
+  },
+  debug: false
 }
 
 /**
@@ -52,15 +53,17 @@ export const syncConfiguration = z.object({
   connectOnStart: z.boolean()
 })
 
-// Export the sync configuration type.
 export type SyncConfiguration = z.infer<typeof syncConfiguration>
 
 /**
  * Export server configuration interface.
  */
-export interface ServerConfiguration {
-  sync: SyncConfiguration
-}
+export const serverConfiguration = z.object({
+  sync: syncConfiguration,
+  debug: z.boolean().default(false)
+})
+
+export type ServerConfiguration = z.infer<typeof serverConfiguration>
 
 /**
  * Write the default configuration file.
@@ -73,4 +76,24 @@ export const writeDefaultConfig = (path: string) => {
 
   // Write the file.
   writeFileSync(path, JSON.stringify(defaultConfig, null, 2))
+}
+
+export const readConfig = () => {
+  // Check if the file exists.
+  const configPath = process.env.CONFIG_PATH || './config/config.json'
+  if (!existsSync(configPath))
+    throw new Error(`Configuration file not found at '${configPath}'`)
+
+  // Read the file.
+  const config = JSON.parse(readFileSync(configPath, 'utf-8'))
+
+  const validatedConfig = serverConfiguration.safeParse(config)
+
+  if (validatedConfig.success) {
+    return validatedConfig.data
+  } else {
+    throw new Error(
+      'Configuration file is invalid: ' + validatedConfig.error.message
+    )
+  }
 }

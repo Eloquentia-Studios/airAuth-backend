@@ -1,5 +1,5 @@
-import fs from 'fs'
 import type WebSocket from 'ws'
+import serverConfig from '../global/configuration.js'
 import { dbWritesPaused, setDbWritesPaused } from '../global/pauseTraffic.js'
 import arraysAreEqual from '../lib/arraysAreEqual.js'
 import type {
@@ -46,9 +46,7 @@ const tableSyncPriority: {
  */
 export const initSync = () => {
   // Load the configuration.
-  const configPath = process.env.CONFIG_PATH || './config/config.json'
-  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))
-  configuration = config.sync
+  configuration = serverConfig.sync
 
   // Check configuration validity.
   const result = syncConfiguration.safeParse(configuration)
