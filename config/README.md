@@ -27,3 +27,7 @@ possible are:
   "connectOnStart": true // Wheather or not the server should try to connect to remote servers on start. Used for development. This should be left on 'true' in almost all cases. DEFAULT: true
 }
 ```
+
+## Debug mode
+
+By setting `"debug": true` in the server configuration it enables more logging during runtime.

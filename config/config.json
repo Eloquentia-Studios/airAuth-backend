@@ -1,6 +1,6 @@
 {
   "sync": {
-    "enabled": false,
+    "enabled": true,
     "server": {
       "name": "SERVER-NAME",
       "port": 7070
@@ -8,12 +8,14 @@
     "servers": [
       {
         "name": "SECOND-SERVER-NAME",
-        "address": "http://server.two:7070"
+        "address": "airauth.iammorethan.me/sync"
       }
     ],
+    "ssl": true,
     "fullSyncInterval": 30,
     "secret": "THIS-SHOULD-BE-RANDOMLY-GENERATED",
     "startDelay": 0,
     "connectOnStart": true
-  }
+  },
+  "debug": true
 }

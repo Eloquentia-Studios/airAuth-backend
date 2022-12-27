@@ -1,6 +1,7 @@
 import type { Otp } from '@prisma/client'
 import createUpdatedPrismaObject from '../lib/createUpdatedPrismaObject.js'
 import hashObject from '../lib/hashObject.js'
+import logDebug from '../lib/logDebug.js'
 import type { RecordHash } from '../types/RecordHash.d'
 import prisma from './prisma.js'
 import { deleteRecord, updateRecord } from './sync.js'
@@ -13,6 +14,7 @@ import { deleteRecord, updateRecord } from './sync.js'
  * @returns Otp object.
  */
 export const addOtp = async (url: string, ownerId: string): Promise<Otp> => {
+  logDebug('Adding OTP:', url, ownerId)
   const otp = await prisma.otp.create({
     data: {
       url,
@@ -45,6 +47,7 @@ export const getOtps = async (ownerId: string): Promise<Otp[]> => {
       }
     }
   })
+  logDebug('Got OTPs:', otps, 'for user:', ownerId)
 
   return otps
 }
@@ -62,6 +65,8 @@ export const getOtp = async (id: string): Promise<Otp | null> => {
     }
   })
 
+  logDebug('Got OTP:', otp)
+
   return otp
 }
 
@@ -72,6 +77,7 @@ export const getOtp = async (id: string): Promise<Otp | null> => {
  * @returns The deleted Otp object.
  */
 export const deleteOtp = async (id: string): Promise<Otp> => {
+  logDebug('Deleting OTP:', id)
   const deletedOtp = await prisma.otp.delete({
     where: {
       id
@@ -97,6 +103,8 @@ export const updateOtp = async (
   issuer?: string | null,
   label?: string | null
 ): Promise<Otp> => {
+  logDebug('Updating OTP:', id, { issuer, label })
+
   // Create a new object from the old one with the updated fields.
   const newOtpData = createUpdatedPrismaObject(await getOtp(id), {
     issuer,
@@ -126,7 +134,7 @@ export const updateOtp = async (
  * @returns Array of all otp uuids and their corresponding hashes.
  */
 export const getOtpHashes = async (): Promise<RecordHash[]> => {
-  // Get all OTP records with hashes.
+  logDebug('Getting OTP hashes')
   return await prisma.otp.findMany({
     select: {
       id: true,

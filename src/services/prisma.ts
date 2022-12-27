@@ -1,4 +1,5 @@
 import Prisma from '@prisma/client'
+import logDebug from '../lib/logDebug.js'
 import type DatabaseRecord from '../types/DatabaseRecord.d'
 import type {
   RecordHashes,
@@ -16,6 +17,7 @@ export default prisma
  * @returns Record hashes.
  */
 export const getAllRecordHashes = async () => {
+  logDebug('Getting all record hashes.')
   const modelNames = getAllModels()
   const recordHashes: RecordHashes = {}
 
@@ -31,6 +33,7 @@ export const getAllRecordHashes = async () => {
     })
   )
 
+  logDebug('Record hashes:', recordHashes)
   return recordHashes
 }
 
@@ -45,6 +48,7 @@ export const getRecord = async (
   tableName: TableNames,
   id: string
 ): Promise<DatabaseRecord> => {
+  logDebug('Getting record:', tableName, id)
   // @ts-ignore - Prisma model names are dynamic.
   return await prisma[tableName].findUnique({
     where: { id }
@@ -62,6 +66,7 @@ export const getRecords = async (
   tableName: TableNames,
   ids: string[]
 ): Promise<DatabaseRecord[]> => {
+  logDebug('Getting records:', tableName, ids)
   // @ts-ignore - Prisma model names are dynamic.
   return await prisma[tableName].findMany({
     where: {
@@ -83,6 +88,7 @@ export const applyRecords = async (
   records: DatabaseRecord[]
 ) => {
   for (const record of records) {
+    logDebug('Applying record to table:', tableName, 'Record:', record)
     // @ts-ignore - Prisma model names are dynamic.
     await prisma[tableName].upsert({
       where: { id: record.id },
@@ -99,6 +105,7 @@ export const applyRecords = async (
  * @param id Record ID.
  */
 export const deleteRecord = async (tableName: TableNames, id: string) => {
+  logDebug('Deleting record:', tableName, id)
   // @ts-ignore - Prisma model names are dynamic.
   await prisma[tableName].delete({
     where: { id }

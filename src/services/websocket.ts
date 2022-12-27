@@ -1,5 +1,6 @@
 import { v4 as uuid } from 'uuid'
 import WebSocket, { WebSocketServer } from 'ws'
+import logDebug from '../lib/logDebug.js'
 import type { ListenerKeys, ListenerTypes } from '../types/ListenerTypes.d'
 import type {
   OverloadingInvokeListener,
@@ -39,6 +40,7 @@ export const registerListener: OverloadingWithFunction<
   if (!socketListeners[type]) socketListeners[type] = {}
   if (!socketListeners[type][event]) socketListeners[type][event] = {}
   socketListeners[type][event][id] = listener
+  logDebug(`Registered listener for ${type}:${event}.`)
 }
 
 /**
@@ -51,6 +53,7 @@ export const removeListener = (id: string) => {
     for (const event in socketListeners[type]) {
       if (socketListeners[type][event][id]) {
         delete socketListeners[type][event][id]
+        logDebug(`Removed listener ${id} for ${type}:${event}.`)
       }
     }
   }
@@ -69,6 +72,7 @@ const invokeListeners: OverloadingInvokeListener<
   ListenerTypes,
   ListenerKeys
 > = (type: string, event: string, ws: WebSocket, data: any) => {
+  logDebug(`Invoking listeners for ${type}:${event} with data:`, data)
   if (socketListeners[type] && socketListeners[type][event]) {
     const ids = Object.keys(socketListeners[type][event])
     ids.forEach((id) => socketListeners[type][event][id](ws, data))
@@ -81,15 +85,18 @@ const invokeListeners: OverloadingInvokeListener<
  * @param port Port to listen on.
  */
 export const startWebsocket = (port: number) => {
+  logDebug('Starting websocket server...')
   wss = new WebSocketServer({ port })
   wss.on('connection', (ws) => {
+    logDebug('New websocket connection.')
     sendMessage(ws, 'connection', 'connection-info', getServerInfo())
-    listenForServerInfo(ws)
+    listenForServerInfo(ws, true)
     listenForMessages(ws)
   })
 
   wss.on('listening', () => {
-    console.log('Websocket server started on port ' + port)
+    logDebug('Websocket server started.')
+    console.log('Websocket server started on port', port)
   })
 }
 
@@ -99,6 +106,7 @@ export const startWebsocket = (port: number) => {
  * @param servers Array of remote servers.
  */
 export const connectToServers = (servers: RemoteServer[], ssl: boolean) => {
+  logDebug('Connecting to remote servers...')
   for (const server of servers) {
     connectToServer(server, ssl)
   }
@@ -110,24 +118,32 @@ export const connectToServers = (servers: RemoteServer[], ssl: boolean) => {
  * @param server Remote server.
  */
 export const connectToServer = (server: RemoteServer, ssl: boolean) => {
+  logDebug('Connecting to remote server:', server.name)
   const protocol = ssl ? 'wss' : 'ws'
   const setProtocol = server.address.split('://')[0]
   if (setProtocol !== protocol && setProtocol.length <= 3)
     return console.log('Invalid protocol for server in config:', server.name)
   if (setProtocol.length > 3) server.address = protocol + '://' + server.address
+  logDebug(`Connecting to server: ${server.address}`)
 
   // Handle connection open.
   const ws = new WebSocket(server.address)
   ws.onopen = () => {
-    if (checkAndAddConnection(server.name, ws)) {
+    logDebug('Connected to server:', server.name)
+    if (connectionAlreadyExists(server.name, ws)) {
+      listenForServerInfo(ws, false)
       invokeListeners('connection', 'established', ws, null)
+      addConnection(server.name, ws)
+    } else {
+      closeDuplicateConnection(ws, server.name)
     }
   }
 
   // Handle errors.
-  ws.onerror = () => {
+  ws.onerror = (e) => {
     invokeListeners('connection', 'error', ws, server)
     console.log('Unable to connect to server:', server.name)
+    logDebug(`Websocket error for '${server.name}':`, e.message)
   }
 }
 
@@ -138,18 +154,8 @@ export const connectToServer = (server: RemoteServer, ssl: boolean) => {
  * @param ws WebSocket connection.
  * @returns True if the connection was added, false if it already exists.
  */
-const checkAndAddConnection = (name: string, ws: WebSocket) => {
-  // Check if the connection already exists.
-  if (!connections.has(name) || connections.get(name)?.readyState !== ws.OPEN) {
-    addConnection(name, ws)
-    return true
-  }
-
-  // Connection already exists.
-  sendMessage(ws, 'connection', 'error', 'Already connected to server.')
-  ws.close()
-  return false
-}
+const connectionAlreadyExists = (name: string, ws: WebSocket) =>
+  !connections.has(name) || connections.get(name)?.readyState !== ws.OPEN
 
 /**
  * Add a new connection to the connections map.
@@ -159,10 +165,11 @@ const checkAndAddConnection = (name: string, ws: WebSocket) => {
  */
 const addConnection = (name: string, ws: WebSocket) => {
   // Add the connection.
+  logDebug('Adding connection:', name)
   connections.set(name, ws)
 
   // Listen for events.
-  listenForServerInfo(ws, false)
+  logDebug('Listening for events on connection:', name)
   listenForMessages(ws)
   listenForErrors(ws)
 
@@ -172,6 +179,12 @@ const addConnection = (name: string, ws: WebSocket) => {
   console.log('Connected to server:', name)
 }
 
+const closeDuplicateConnection = (ws: WebSocket, name: string) => {
+  logDebug('Connection already exists:', name)
+  sendMessage(ws, 'connection', 'error', 'Already connected to server.')
+  ws.close()
+}
+
 /**
  * Listen for messages on a websocket connection.
  *
@@ -179,6 +192,7 @@ const addConnection = (name: string, ws: WebSocket) => {
  */
 const listenForMessages = (ws: WebSocket) => {
   ws.onmessage = (event) => {
+    logDebug('Received message on websocket connection:', event.data)
     const data = JSON.parse(event.data.toString())
     invokeListeners(data.type, data.event, ws, data.message)
   }
@@ -202,15 +216,20 @@ const listenForErrors = (ws: WebSocket) => {
  * @param ws WebSocket connection.
  * @param server True if the connection is to a server, false if it is from a client.
  */
-const listenForServerInfo = (ws: WebSocket, server = true) => {
+const listenForServerInfo = (_ws: WebSocket, server = true) => {
   const listener = registerListener(
     'connection',
     'connection-info',
     (ws, data) => {
-      console.log('Connection info:', data)
-      if (ws === ws && data?.name) {
-        if (server) checkAndAddConnection(data.name, ws)
-        else sendMessage(ws, 'connection', 'connection-info', getServerInfo())
+      logDebug('Received connection info from peer:', data?.name)
+      if (_ws === ws && data?.name) {
+        logDebug('Adding connection:', data.name, 'from server:', server)
+        if (server) {
+          // Check if the connection already exists.
+          if (connectionAlreadyExists(data.name, ws))
+            addConnection(data.name, ws)
+          else closeDuplicateConnection(ws, data.name)
+        } else sendMessage(ws, 'connection', 'connection-info', getServerInfo())
         removeListener(listener)
       }
     }
@@ -227,6 +246,14 @@ export const sendMessage: OverloadingSendMessage<
   ListenerTypes,
   ListenerKeys
 > = (ws: WebSocket, type: string, event: string, message: any) => {
+  logDebug(
+    'Sending message to websocket. Type:',
+    type,
+    'Event:',
+    event,
+    'Message:',
+    JSON.stringify(message)
+  )
   ws.send(
     JSON.stringify({
       type,

@@ -2,6 +2,7 @@ import type { KeyPair, User } from '@prisma/client'
 import argon2 from 'argon2'
 import createUpdatedPrismaObject from '../lib/createUpdatedPrismaObject.js'
 import hashObject from '../lib/hashObject.js'
+import logDebug from '../lib/logDebug.js'
 import type { RecordHash } from '../types/RecordHash.d'
 import type UserUpdates from '../types/UserUpdates.d'
 import { generateEncryptedKeyPair } from './encryption.js'
@@ -25,6 +26,7 @@ export const createUser = async (
   password: string,
   phonenumber?: string
 ): Promise<User & { keyPair: KeyPair }> => {
+  logDebug('Creating user:', username, email, phonenumber)
   // Check phonenumber and hash password.
   phonenumber = phonenumber || undefined // TODO: Figure out a better way to do this.
   const passwordHash = await hashPassword(password)
@@ -72,6 +74,7 @@ export const createUser = async (
 export const getUser = async (
   identifier: string
 ): Promise<(User & { keyPair: KeyPair }) | null> => {
+  logDebug('Getting user:', identifier)
   const user = (await prisma.user.findFirst({
     where: {
       OR: [
@@ -100,16 +103,13 @@ export const validateUser = async (
   identifier: string,
   password: string
 ): Promise<(User & { keyPair: KeyPair }) | null> => {
-  // Get the user.
-  const user = await getUser(identifier)
+  logDebug('Validating user:', identifier, 'with a password')
 
-  // Check if the user exists.
+  const user = await getUser(identifier)
   if (!user) return null
 
   // Check if the password is correct.
   const passwordCorrect = await verifyPassword(password, user.passwordHash)
-
-  // Return null if the password is incorrect, otherwise return the user.
   if (!passwordCorrect) return null
 
   return user
@@ -122,6 +122,7 @@ export const validateUser = async (
  * @returns The user if the user could be deleted.
  */
 export const deleteUser = async (id: string): Promise<User> => {
+  logDebug('Deleting user:', id)
   return await prisma.user.delete({
     where: {
       id
@@ -140,6 +141,8 @@ export const updateUser = async (
   id: string,
   updates: UserUpdates
 ): Promise<User> => {
+  logDebug('Updating user:', id, { ...updates, password: '***' })
+
   // Hash password if it is set.
   if (updates.password) {
     updates.passwordHash = await hashPassword(updates.password)
