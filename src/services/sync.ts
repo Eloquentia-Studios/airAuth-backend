@@ -1,6 +1,6 @@
 import type WebSocket from 'ws'
 import serverConfig from '../global/configuration.js'
-import { dbWritesPaused, setDbWritesPaused } from '../global/pauseTraffic.js'
+import { dbWritesPaused, setDbWritesPausedBy } from '../global/pauseTraffic.js'
 import arraysAreEqual from '../lib/arraysAreEqual.js'
 import logDebug from '../lib/logDebug.js'
 import type {
@@ -74,7 +74,7 @@ export const sendRecordHashes = async (ws: WebSocket): Promise<void> => {
   }
 
   // Pause writes to the database.
-  setDbWritesPaused(true)
+  setDbWritesPausedBy(true, ws)
 
   logDebug('Sending record hashes to ' + ws.url + '...')
   const recordHashes = await getAllRecordHashes()
@@ -224,7 +224,7 @@ const recieveRecordHashes = async (
 ) => {
   logDebug('Recieved record hashes from ' + ws.url + '.')
   logDebug('Remote record hashes:', remoteRecordHashes)
-  setDbWritesPaused(true)
+  setDbWritesPausedBy(true, ws)
 
   // Compare remote and local tables.
   const localRecordHashes = await getAllRecordHashes()
@@ -449,7 +449,7 @@ const applyNewerRecords = async (ws: WebSocket, payload: RecordComparisons) => {
   sendMessage(ws, 'sync', 'newerApplied', true)
 
   // Unpause writes to the database.
-  setDbWritesPaused(false)
+  setDbWritesPausedBy(false, ws)
 }
 
 /**
@@ -589,7 +589,7 @@ const handleNewerRecordsResponse = async (ws: WebSocket, success: boolean) => {
   if (!success) throw new Error('Remote server failed to apply newer records!')
 
   // Unpause writes to the database.
-  setDbWritesPaused(false)
+  setDbWritesPausedBy(false, ws)
 
   // Run sync again after a delay.
   const time = configuration.fullSyncInterval * 60000

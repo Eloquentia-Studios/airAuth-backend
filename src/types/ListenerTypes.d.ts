@@ -1,6 +1,6 @@
 // Listener types
 export interface ListenerTypes {
-  connection: 'open' | 'error' | 'connection-info' | 'established'
+  connection: 'open' | 'error' | 'connection-info' | 'established' | 'close'
   sync:
     | 'recordHashes'
     | 'mismatchingRecords'

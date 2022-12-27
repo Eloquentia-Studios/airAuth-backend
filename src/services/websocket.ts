@@ -92,6 +92,7 @@ export const startWebsocket = (port: number) => {
     sendMessage(ws, 'connection', 'connection-info', getServerInfo())
     listenForServerInfo(ws, true)
     listenForMessages(ws)
+    listenForDisconnect(ws)
   })
 
   wss.on('listening', () => {
@@ -134,6 +135,7 @@ export const connectToServer = (server: RemoteServer, ssl: boolean) => {
       listenForServerInfo(ws, false)
       invokeListeners('connection', 'established', ws, null)
       addConnection(server.name, ws)
+      listenForDisconnect(ws)
     } else {
       closeDuplicateConnection(ws, server.name)
     }
@@ -179,10 +181,27 @@ const addConnection = (name: string, ws: WebSocket) => {
   console.log('Connected to server:', name)
 }
 
+/**
+ * Close a duplicate connection.
+ *
+ * @param ws WebSocket connection.
+ * @param name Name of the connection.
+ */
 const closeDuplicateConnection = (ws: WebSocket, name: string) => {
   logDebug('Connection already exists:', name)
   sendMessage(ws, 'connection', 'error', 'Already connected to server.')
   ws.close()
+}
+
+/**
+ * Listen for socket disconnects.
+ *
+ * @param ws WebSocket connection.
+ */
+const listenForDisconnect = (ws: WebSocket) => {
+  ws.onclose = () => {
+    invokeListeners('connection', 'close', ws, null)
+  }
 }
 
 /**
