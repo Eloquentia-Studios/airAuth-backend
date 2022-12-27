@@ -47,3 +47,6 @@ config/server*.config.json
 
 # Docker volumes
 volumes/
+
+# Backup files
+backups/

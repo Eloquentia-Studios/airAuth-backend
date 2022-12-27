@@ -7,6 +7,7 @@ import type {
   TableNamesList
 } from '../types/RecordHash.d'
 import memoize from './../lib/memoize.js'
+import type { Records } from './../types/Records.d'
 
 const prisma = new Prisma.PrismaClient()
 export default prisma
@@ -33,8 +34,33 @@ export const getAllRecordHashes = async () => {
     })
   )
 
-  logDebug('Record hashes:', recordHashes)
+  logDebug(
+    'Got',
+    countRecords(recordHashes),
+    'record hashes from the database.'
+  )
   return recordHashes
+}
+
+/**
+ * Get all records for all models in prisma.
+ *
+ * @returns Records.
+ */
+export const getAllRecords = async () => {
+  logDebug('Getting all records.')
+  const modelNames = getAllModels()
+  const records: Records = {}
+
+  await Promise.all(
+    modelNames.map(async (modelName) => {
+      // @ts-ignore - Prisma model names are dynamic.
+      records[modelName] = await prisma[modelName].findMany()
+    })
+  )
+
+  logDebug('Got', countRecords(records), 'records from the database.')
+  return records
 }
 
 /**
@@ -121,3 +147,17 @@ const getAllModels = memoize<TableNamesList>(() => {
     (property) => !property.startsWith('_')
   ) as TableNamesList
 })
+
+/**
+ * Count the number of children in an object of arrays.
+ *
+ * @param obj Object of arrays.
+ * @returns Number of children.
+ */
+const countRecords = (obj: { [key: string]: any[] }) => {
+  let count = 0
+  for (const key in obj) {
+    count += obj[key].length
+  }
+  return count
+}

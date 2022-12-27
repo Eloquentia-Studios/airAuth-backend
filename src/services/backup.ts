@@ -1,10 +1,16 @@
 import { type Backup } from '@prisma/client'
+import { existsSync, mkdirSync } from 'fs'
+import { writeFile } from 'fs/promises'
+import { join as pathJoin } from 'path'
 import serverConfig from '../global/configuration.js'
 import logDebug from '../lib/logDebug.js'
 import waitForDb from '../lib/waitForDb.js'
+import type { Records } from '../types/Records.js'
 import { hours } from './../global/time.js'
 import { type BackupConfiguration } from './config.js'
-import prisma from './prisma.js'
+import { symmetricEncrypt } from './encryption.js'
+import prisma, { getAllRecords } from './prisma.js'
+import { pathSafeDateTime } from './time.js'
 
 let configuration: BackupConfiguration
 
@@ -51,9 +57,49 @@ const calculateTimeUntilNextBackup = (lastBackup: Backup | null) => {
 const backup = async () => {
   if (waitForDb(backup)) return
 
-  console.log('Backing up...')
-  await addBackupToDb('test')
+  const rawData = await getAllRecords()
+  const encryptedData = await encryptData(rawData)
+
+  createBackupFolder()
+  const filePath = createFilePath()
+  await writeFile(filePath, encryptedData)
+
+  await addBackupToDb(filePath)
   planNextBackup()
+}
+
+/**
+ * Encrypt the data.
+ *
+ * @param data The data to encrypt.
+ * @returns The encrypted data.
+ */
+const encryptData = async (data: Records) => {
+  logDebug('Encrypting data...')
+  const json = JSON.stringify(data)
+  return await symmetricEncrypt(json, configuration.secret)
+}
+
+/**
+ * Create backup folder if it does not exist.
+ */
+const createBackupFolder = () => {
+  if (!existsSync(configuration.path)) {
+    logDebug(`Creating backup folder: ${configuration.path}`)
+    mkdirSync(configuration.path)
+  }
+}
+
+/**
+ * Create file path for new backup.
+ *
+ * @returns The file path for the new backup.
+ */
+const createFilePath = () => {
+  const filename = `${pathSafeDateTime(new Date())}.bak.enc`
+  const backupFilePath = pathJoin(configuration.path, filename)
+  logDebug(`Creating backup file: ${backupFilePath}`)
+  return backupFilePath
 }
 
 /**
