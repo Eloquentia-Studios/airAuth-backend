@@ -194,7 +194,7 @@ export const isValidPath = (path: any): boolean => {
   if (!isString(path)) return false
   if (path.length === 0) return false
 
-  const dirRegex = /^(\/)?([a-z0-9]+\/)*[a-z0-9\.]+\/?$/i
+  const dirRegex = /^(\.)?(\/)?([a-z0-9]+\/)*[a-z0-9\.]+\/?$/i
   if (dirRegex.test(path)) return true
   return false
 }
