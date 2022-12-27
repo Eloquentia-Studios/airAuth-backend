@@ -96,7 +96,7 @@ export const getServerInfo = () => ({
  * @param tableName Table name.
  * @param record Record data.
  */
-export const updateRecord = async (
+export const sendRecordToSyncedServers = async (
   tableName: TableNames,
   record: DatabaseRecord
 ) => {
@@ -194,7 +194,7 @@ const recieveRecordDeletion = async (
 
   // Send the current record to the other server.
   logDebug('Record is older, sending current record.')
-  updateRecord(tableName, currentRecord)
+  sendRecordToSyncedServers(tableName, currentRecord)
 }
 
 /**
