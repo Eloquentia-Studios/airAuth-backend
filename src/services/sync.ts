@@ -14,7 +14,7 @@ import type {
   TableNamesList
 } from '../types/RecordHash.js'
 import DatabaseRecord from './../types/DatabaseRecord.d'
-import type { SyncConfiguration } from './config'
+import { type SyncConfiguration } from './config.js'
 import {
   applyRecords,
   deleteRecord as deleteRecordFromDatabase,
@@ -46,12 +46,11 @@ const tableSyncPriority: {
  */
 export const initSync = () => {
   logDebug('Initializing sync service...')
-  configuration = serverConfig.sync
-
   // Check if the sync service is enabled.
-  if (!configuration.enabled) return console.log('Sync service is disabled.')
+  configuration = serverConfig.sync
+  if (!configuration.enabled) return console.log('Sync is disabled.')
 
-  console.log('Sync service is enabled.')
+  console.log('Sync is enabled.')
   console.log('Server name: ' + configuration.server.name)
 
   // Wait for the start delay.

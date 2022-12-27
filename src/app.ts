@@ -1,5 +1,6 @@
 import createDummyData from './lib/createDummyData.js'
 import logDebug from './lib/logDebug.js'
+import { initBackup } from './services/backup.js'
 import { createServer } from './services/express.js'
 import { loadKeys } from './services/jwt.js'
 import { initSync } from './services/sync.js'
@@ -22,5 +23,5 @@ app.listen(port, () => {
   console.log(`Server listening on port ${port}`)
 })
 
-// Start the sync service.
+initBackup()
 initSync()
