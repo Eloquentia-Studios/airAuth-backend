@@ -89,7 +89,6 @@ export const startWebsocket = (port: number) => {
   wss = new WebSocketServer({ port })
   wss.on('connection', (ws) => {
     logDebug('New websocket connection.')
-    console.trace('New websocket connection.')
     sendMessage(ws, 'connection', 'connection-info', getServerInfo())
     listenForServerInfo(ws, true)
     listenForMessages(ws)
