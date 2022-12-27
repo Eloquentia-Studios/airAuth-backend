@@ -23,12 +23,9 @@ export const initBackup = async () => {
  */
 const planNextBackup = async () => {
   const lastBackup = await getLastBackup()
-  const timeUntil = calculateTimeUntilNextBackup(lastBackup)
-  logDebug(`Next backup in ${timeUntil}ms.`)
-  setTimeout(() => {
-    backup()
-    planNextBackup()
-  }, timeUntil)
+  const timeUntilNextBackup = calculateTimeUntilNextBackup(lastBackup)
+  logDebug(`Next backup in ${timeUntilNextBackup}ms.`)
+  setTimeout(backup, timeUntilNextBackup)
 }
 
 /**
@@ -40,22 +37,23 @@ const planNextBackup = async () => {
 const calculateTimeUntilNextBackup = (lastBackup: Backup | null) => {
   if (!lastBackup) return 1
 
-  const timeSince = Date.now() - lastBackup.createdAt.getTime()
-  logDebug(`Time since last backup: ${timeSince}ms.`)
-  let timeUntil = hours * configuration.interval - timeSince
-  if (timeUntil <= 0) timeUntil = 1
+  const timeSinceLastBackup = Date.now() - lastBackup.createdAt.getTime()
+  logDebug(`Time since last backup: ${timeSinceLastBackup}ms.`)
+  let timeUntilNextBackup = hours * configuration.interval - timeSinceLastBackup
+  if (timeUntilNextBackup <= 0) timeUntilNextBackup = 1
 
-  return timeUntil
+  return timeUntilNextBackup
 }
 
 /**
  * Create a backup.
  */
-const backup = () => {
+const backup = async () => {
   if (waitForDb(backup)) return
 
   console.log('Backing up...')
-  addBackupToDb('test')
+  await addBackupToDb('test')
+  planNextBackup()
 }
 
 /**

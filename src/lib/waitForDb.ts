@@ -1,4 +1,5 @@
 import { dbWritesPaused } from './../global/pauseTraffic.js'
+import logDebug from './logDebug.js'
 
 /**
  * Wait until the database is ready to write and then call the callback.
@@ -9,6 +10,9 @@ import { dbWritesPaused } from './../global/pauseTraffic.js'
  */
 const waitForDb = (callback: (...a: any[]) => void, ...args: any[]) => {
   if (dbWritesPaused()) {
+    logDebug(
+      `Database writes are paused, waiting 2.5 seconds before calling ${callback.name}.`
+    )
     setTimeout(() => callback(...args), 2500)
     return true
   }
