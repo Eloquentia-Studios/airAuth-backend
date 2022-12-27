@@ -1,6 +1,7 @@
 import { type Backup } from '@prisma/client'
 import serverConfig from '../global/configuration.js'
 import logDebug from '../lib/logDebug.js'
+import waitForDb from '../lib/waitForDb.js'
 import { hours } from './../global/time.js'
 import { type BackupConfiguration } from './config.js'
 import prisma from './prisma.js'
@@ -47,11 +48,21 @@ const calculateTimeUntilNextBackup = (lastBackup: Backup | null) => {
   return timeUntil
 }
 
+/**
+ * Create a backup.
+ */
 const backup = () => {
+  if (waitForDb(backup)) return
+
   console.log('Backing up...')
   addBackupToDb('test')
 }
 
+/**
+ * Add a backup to the database.
+ *
+ * @param filename The filename of the backup.
+ */
 const addBackupToDb = async (filename: string) => {
   logDebug(`Adding backup to database: ${filename}`)
   await prisma.backup.create({

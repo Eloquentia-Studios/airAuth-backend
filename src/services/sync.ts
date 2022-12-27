@@ -1,8 +1,9 @@
 import type WebSocket from 'ws'
 import serverConfig from '../global/configuration.js'
-import { dbWritesPaused, setDbWritesPausedBy } from '../global/pauseTraffic.js'
+import { setDbWritesPausedBy } from '../global/pauseTraffic.js'
 import arraysAreEqual from '../lib/arraysAreEqual.js'
 import logDebug from '../lib/logDebug.js'
+import waitForDb from '../lib/waitForDb.js'
 import type {
   RecordComparison,
   RecordComparisons
@@ -66,13 +67,7 @@ export const initSync = () => {
  * @param ws Websocket to send the message via.
  */
 export const sendRecordHashes = async (ws: WebSocket): Promise<void> => {
-  // Wait until the database is ready. Prevents issues with multiple running syncs.
-  if (dbWritesPaused()) {
-    setTimeout(() => sendRecordHashes(ws), 2500)
-    return
-  }
-
-  // Pause writes to the database.
+  if (waitForDb(sendRecordHashes, ws)) return
   setDbWritesPausedBy(true, ws)
 
   logDebug('Sending record hashes to ' + ws.url + '...')
@@ -141,6 +136,8 @@ const recieveRecordUpdate = async (
   _: WebSocket,
   { tableName, record }: { tableName: TableNames; record: DatabaseRecord }
 ) => {
+  if (waitForDb(recieveRecordUpdate, _, { tableName, record })) return
+
   logDebug('Recieved record update, table:', tableName, 'record:', record)
   const currentRecord = await getRecord(tableName, record.id)
   logDebug('Current record:', currentRecord)
@@ -171,6 +168,8 @@ const recieveRecordDeletion = async (
   _: WebSocket,
   { tableName, id, time }: { tableName: TableNames; id: string; time: number }
 ) => {
+  if (waitForDb(recieveRecordDeletion, _, { tableName, id, time })) return
+
   logDebug(
     'Recieved record deletion, table:',
     tableName,
