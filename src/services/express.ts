@@ -4,6 +4,7 @@ import HttpError from '../enums/HttpError.js'
 import createResponseError from '../lib/createResponseError.js'
 import otpRouter from '../routers/otp.js'
 import usersRouter from '../routers/users.js'
+import logDebug from './../lib/logDebug.js'
 
 /**
  * Create a new Express server and run the automatic setup.
@@ -11,6 +12,7 @@ import usersRouter from '../routers/users.js'
  * @returns Express instance.
  */
 export const createServer = (): Express => {
+  logDebug('Creating express server...')
   // Create a new express server.
   const app = express()
   setupGlobalMiddleware(app)
@@ -25,6 +27,7 @@ export const createServer = (): Express => {
  * @param app Express instance.
  */
 const setupGlobalMiddleware = (app: Express): void => {
+  logDebug('Setting up global middleware...')
   app.use(express.json())
 }
 
@@ -34,6 +37,8 @@ const setupGlobalMiddleware = (app: Express): void => {
  * @param app Express instance.
  */
 const setupRoutes = (app: Express): void => {
+  logDebug('Setting up routes...')
+
   // Setup the users router.
   app.use('/api/v1/user', usersRouter.getRouter())
   app.use('/api/v1/otp', otpRouter.getRouter())

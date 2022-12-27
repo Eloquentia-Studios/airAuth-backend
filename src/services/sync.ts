@@ -2,6 +2,7 @@ import type WebSocket from 'ws'
 import serverConfig from '../global/configuration.js'
 import { dbWritesPaused, setDbWritesPaused } from '../global/pauseTraffic.js'
 import arraysAreEqual from '../lib/arraysAreEqual.js'
+import logDebug from '../lib/logDebug.js'
 import type {
   RecordComparison,
   RecordComparisons
@@ -44,6 +45,7 @@ const tableSyncPriority: {
  * Initialize the sync service.
  */
 export const initSync = () => {
+  logDebug('Initializing sync service...')
   configuration = serverConfig.sync
 
   // Check if the sync service is enabled.
@@ -74,10 +76,8 @@ export const sendRecordHashes = async (ws: WebSocket): Promise<void> => {
   // Pause writes to the database.
   setDbWritesPaused(true)
 
-  // Get all record hashes.
+  logDebug('Sending record hashes to ' + ws.url + '...')
   const recordHashes = await getAllRecordHashes()
-
-  // Send the hashes to the other sever.
   sendMessage(ws, 'sync', 'recordHashes', recordHashes)
 }
 
@@ -100,6 +100,12 @@ export const updateRecord = async (
   tableName: TableNames,
   record: DatabaseRecord
 ) => {
+  logDebug(
+    'Sending record update to remote servers, table:',
+    tableName,
+    'record:',
+    record
+  )
   sendEvent('sync', 'updateRecord', { tableName, record })
 }
 
@@ -115,6 +121,14 @@ export const deleteRecord = (
   id: string,
   time: number
 ) => {
+  logDebug(
+    'Sending record deletion to remote servers, table:',
+    tableName,
+    'id:',
+    id,
+    'time:',
+    time
+  )
   sendEvent('sync', 'deleteRecord', { tableName, id, time })
 }
 
@@ -128,24 +142,23 @@ const recieveRecordUpdate = async (
   _: WebSocket,
   { tableName, record }: { tableName: TableNames; record: DatabaseRecord }
 ) => {
-  // Get the current record.
+  logDebug('Recieved record update, table:', tableName, 'record:', record)
   const currentRecord = await getRecord(tableName, record.id)
+  logDebug('Current record:', currentRecord)
 
   // Check if the record is a user and is new.
   // Because the user record contains a keypair, that is a separate record.
   if (tableName === 'user' && !currentRecord) {
-    // Apply records.
+    logDebug('User record is new. Applying user record.')
     await applyRecords(tableName, [{ ...record, keyPair: undefined }])
+    logDebug('Applying keypair record')
     return await applyRecords('keyPair', [{ ...record.keyPair }])
   }
 
   // Check if the record is newer.
   if (!currentRecord || currentRecord?.updatedAt < record.updatedAt)
-    // Update the record.
-    return applyRecords(tableName, [record])
-
-  // Send the current record to the other server.
-  updateRecord(tableName, currentRecord)
+    logDebug('Record is newer, applying.')
+  return applyRecords(tableName, [record])
 }
 
 /**
@@ -159,18 +172,28 @@ const recieveRecordDeletion = async (
   _: WebSocket,
   { tableName, id, time }: { tableName: TableNames; id: string; time: number }
 ) => {
-  // Get the current record.
+  logDebug(
+    'Recieved record deletion, table:',
+    tableName,
+    'id:',
+    id,
+    'time:',
+    time
+  )
   const currentRecord = await getRecord(tableName, id)
+  logDebug('Current record:', currentRecord)
 
   // Check if the record exists.
-  if (!currentRecord) return
+  if (!currentRecord) return logDebug('Record does not exist.')
 
   // Check if the record is newer.
-  if (currentRecord?.updatedAt < new Date(time))
-    // Delete the record.
+  if (currentRecord?.updatedAt < new Date(time)) {
+    logDebug('Record is newer, deleting.')
     return deleteRecordFromDatabase(tableName, id)
+  }
 
   // Send the current record to the other server.
+  logDebug('Record is older, sending current record.')
   updateRecord(tableName, currentRecord)
 }
 
@@ -178,14 +201,13 @@ const recieveRecordDeletion = async (
  * Setup the websocket server and connect to all remote servers.
  */
 const setupSyncWebsocket = () => {
-  // Setup the websocket listeners.
+  logDebug('Setting up sync websocket...')
   setupListeners()
-
-  // Start the websocket server.
   startWebsocket(configuration.server.port)
 
   // Connect to remote servers.
   if (configuration.connectOnStart) {
+    logDebug('Connecting to remote servers...')
     connectToServers(configuration.servers, configuration.ssl)
   }
 }
@@ -200,7 +222,8 @@ const recieveRecordHashes = async (
   ws: WebSocket,
   remoteRecordHashes: RecordHashes
 ) => {
-  // Pause writes to the database.
+  logDebug('Recieved record hashes from ' + ws.url + '.')
+  logDebug('Remote record hashes:', remoteRecordHashes)
   setDbWritesPaused(true)
 
   // Compare remote and local tables.
@@ -224,6 +247,7 @@ const recieveRecordHashes = async (
   )
 
   // Send mismatching records to the other server.
+  logDebug('Sending mismatching hashes:', mismatchingHashes)
   sendMessage(ws, 'sync', 'mismatchingRecords', mismatchingHashes)
 }
 
@@ -333,6 +357,14 @@ const applySingleThreadedRecords = async (
 ) => {
   // Apply the records.
   for (const tableName of tableSyncPriority.singleThreaded) {
+    logDebug(
+      'Applying records for table:',
+      tableName,
+      'Records:',
+      records,
+      'toSend:',
+      toSend
+    )
     await applyAndCompareRemoteRecords(tableName, records, toSend)
   }
 }
@@ -460,6 +492,8 @@ const applyNewerRecordsToDb = async (
   tableName: TableNames,
   payload: RecordComparisons
 ) => {
+  logDebug('Applying newer records for table:', tableName, 'Records:', payload)
+
   // Apply mismatching remote records.
   const mismatchingRecords = payload[tableName]?.mismatchHashes
   if (!mismatchingRecords) throw new Error('Invalid mismatching records')
@@ -616,6 +650,7 @@ const differentHash = (x: RecordHash[], y: RecordHash[]) =>
  */
 const setupListeners = () => {
   // Send & listen for record hashes
+  logDebug('Setting up sync websocket listeners...')
   registerListener('connection', 'established', sendRecordHashes)
   registerListener('sync', 'recordHashes', recieveRecordHashes)
   registerListener('sync', 'mismatchingRecords', handleMismatchingRecords)

@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken'
 import path from 'path'
 import { generateECDSAKeyPair } from '../services/encryption.js'
 import type TokenUserData from '../types/TokenData.d'
+import logDebug from './../lib/logDebug.js'
 
 // Private and public keys.
 let privateKey: string
@@ -24,6 +25,8 @@ export const loadKeys = async () => {
   // Load private and public keys.
   privateKey = fs.readFileSync('./config/pems/private.key', 'utf8')
   publicKey = fs.readFileSync('./config/pems/public.key', 'utf8')
+
+  logDebug('Loaded keys.')
 }
 
 /**
@@ -85,6 +88,7 @@ export const verifyToken = (token: string): TokenUserData | null => {
  */
 const generateKeys = async (privateKeyPath: string, publicKeyPath: string) => {
   // Print information about key generation.
+  logDebug('Generating new keys for user authentication...')
   printKeyGenerationInfo()
 
   // Generate a new key pair.
@@ -95,6 +99,7 @@ const generateKeys = async (privateKeyPath: string, publicKeyPath: string) => {
   if (!existsSync(dir)) mkdirSync(dir)
 
   // Write the keys to the given paths.
+  logDebug('Writing keys to disk...')
   writeFileSync(privateKeyPath, keys.privateKey)
   writeFileSync(publicKeyPath, keys.publicKey)
 

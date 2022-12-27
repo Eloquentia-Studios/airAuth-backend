@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { z } from 'zod'
+import logDebug from '../lib/logDebug.js'
 
 // Define the default configuration.
 const defaultConfig: ServerConfiguration = {
@@ -76,8 +77,14 @@ export const writeDefaultConfig = (path: string) => {
 
   // Write the file.
   writeFileSync(path, JSON.stringify(defaultConfig, null, 2))
+  logDebug('Default configuration file written to ' + path)
 }
 
+/**
+ * Read the configuration file.
+ *
+ * @returns Configuration object.
+ */
 export const readConfig = () => {
   // Check if the file exists.
   const configPath = process.env.CONFIG_PATH || './config/config.json'
