@@ -200,7 +200,13 @@ const closeDuplicateConnection = (ws: WebSocket, name: string) => {
  */
 const listenForDisconnect = (ws: WebSocket) => {
   ws.onclose = () => {
-    invokeListeners('connection', 'close', ws, null)
+    const name = getConnectionName(ws)
+    if (name) {
+      logDebug('Connection closed:', name)
+      connections.delete(name)
+    } else logDebug('Connection closed for unknown server.')
+
+    invokeListeners('connection', 'close', ws, name)
   }
 }
 
@@ -296,4 +302,16 @@ export const sendEvent: OverloadingSendMessageAll<
 > = (type: string, event: string, message: any) => {
   // @ts-expect-error - This is checked by overloading.
   connections.forEach(async (ws) => sendMessage(ws, type, event, message))
+}
+
+/**
+ * Get the name of a connection.
+ *
+ * @param ws WebSocket connection.
+ * @returns Name of the connection or undefined if it doesn't exist.
+ */
+const getConnectionName = (ws: WebSocket) => {
+  for (const [name, connection] of connections)
+    if (connection === ws) return name
+  return undefined
 }

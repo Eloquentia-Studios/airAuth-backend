@@ -646,12 +646,26 @@ const differentHash = (x: RecordHash[], y: RecordHash[]) =>
   x.filter((a) => y.some((b) => a.id === b.id && a.hash !== b.hash))
 
 /**
+ * Handle lost connection.
+ *
+ * @param ws Websocket connection.
+ */
+const lostConnection = (ws: WebSocket, name: string | undefined) => {
+  logDebug(
+    'Starting database writes paused by lost connection from',
+    name ?? 'unknown'
+  )
+  setDbWritesPausedBy(false, ws)
+}
+
+/**
  * Setup sync websocket listeners.
  */
 const setupListeners = () => {
   // Send & listen for record hashes
   logDebug('Setting up sync websocket listeners...')
   registerListener('connection', 'established', sendRecordHashes)
+  registerListener('connection', 'close', lostConnection)
   registerListener('sync', 'recordHashes', recieveRecordHashes)
   registerListener('sync', 'mismatchingRecords', handleMismatchingRecords)
   registerListener('sync', 'newerRecords', applyNewerRecords)
