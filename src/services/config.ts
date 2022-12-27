@@ -29,6 +29,13 @@ const defaultConfig: ServerConfiguration = {
     startDelay: 0,
     connectOnStart: true
   },
+  backup: {
+    enabled: false,
+    interval: 72,
+    path: './backups/',
+    keep: 10,
+    secret: 'THIS-SHOULD-BE-RANDOMLY-GENERATED'
+  },
   debug: false
 }
 
@@ -92,6 +99,7 @@ export type BackupConfiguration = z.infer<typeof backupConfiguration>
 export const serverConfiguration = z.object({
   backup: backupConfiguration,
   sync: syncConfiguration,
+  backup: backupConfiguration,
   debug: z.boolean().default(false)
 })
 
