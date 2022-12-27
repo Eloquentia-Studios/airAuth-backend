@@ -29,13 +29,6 @@ const defaultConfig: ServerConfiguration = {
     startDelay: 0,
     connectOnStart: true
   },
-  backup: {
-    enabled: false,
-    interval: 72,
-    path: './backups/',
-    keep: 10,
-    secret: 'THIS-SHOULD-BE-RANDOMLY-GENERATED'
-  },
   debug: false
 }
 
