@@ -1,7 +1,7 @@
 import type { WebSocket } from 'ws'
 
 let writesPaused = false
-let pausedBy: WebSocket
+let pausedBy: WebSocket | undefined
 
 /**
  * Check if writes to the database are paused.
@@ -36,7 +36,7 @@ export const setDbWritesPausedBy = (state: boolean, ws: WebSocket) => {
   if (writesPaused && ws !== pausedBy) return false
 
   if (setDbWritesPaused(state)) {
-    pausedBy = ws
+    pausedBy = state ? ws : undefined
     return true
   }
   return false
