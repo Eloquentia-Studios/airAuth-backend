@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { z } from 'zod'
-import logDebug from '../lib/logDebug.js'
+import { isDirectory, isValidPath } from './validate.js'
 
 // Define the default configuration.
 const defaultConfig: ServerConfiguration = {
@@ -21,6 +21,13 @@ const defaultConfig: ServerConfiguration = {
     secret: 'THIS-SHOULD-BE-RANDOMLY-GENERATED',
     startDelay: 0,
     connectOnStart: true
+  },
+  backup: {
+    enabled: false,
+    interval: 72,
+    path: './backups/',
+    keep: 10,
+    secret: 'THIS-SHOULD-BE-RANDOMLY-GENERATED'
   },
   debug: false
 }
@@ -48,7 +55,7 @@ export const syncConfiguration = z.object({
   }),
   ssl: z.boolean(),
   servers: z.array(remoteServer).max(1),
-  fullSyncInterval: z.number().int().min(0).max(1440), // 0 = disabled
+  fullSyncInterval: z.number().int().min(1).max(1440),
   secret: z.string().min(15).max(512),
   startDelay: z.number().int().min(0).max(10000),
   connectOnStart: z.boolean()
@@ -57,10 +64,34 @@ export const syncConfiguration = z.object({
 export type SyncConfiguration = z.infer<typeof syncConfiguration>
 
 /**
+ * Backup configuration schema.
+ */
+const pathIsValid = (data: { enabled: boolean; path: string }): boolean =>
+  !data.enabled || isValidPath(data.path)
+const pathIsNotFile = (data: { enabled: boolean; path: string }): boolean =>
+  !data.enabled || isDirectory(data.path)
+
+export const backupConfiguration = z
+  .object({
+    enabled: z.boolean(),
+    interval: z.number().int().min(1),
+    path: z.string().trim(),
+    keep: z.number().int().min(1),
+    secret: z.string().min(15).max(512)
+  })
+  .refine(pathIsValid, {
+    message: 'Backup path does not look like a valid path.'
+  })
+  .refine(pathIsNotFile, { message: 'Backup path cannot be a file!' })
+
+export type BackupConfiguration = z.infer<typeof backupConfiguration>
+
+/**
  * Export server configuration interface.
  */
 export const serverConfiguration = z.object({
   sync: syncConfiguration,
+  backup: backupConfiguration,
   debug: z.boolean().default(false)
 })
 
@@ -77,7 +108,7 @@ export const writeDefaultConfig = (path: string) => {
 
   // Write the file.
   writeFileSync(path, JSON.stringify(defaultConfig, null, 2))
-  logDebug('Default configuration file written to ' + path)
+  console.log('Default configuration file written to:', path)
 }
 
 /**
