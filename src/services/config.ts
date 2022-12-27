@@ -92,7 +92,6 @@ export type BackupConfiguration = z.infer<typeof backupConfiguration>
 export const serverConfiguration = z.object({
   backup: backupConfiguration,
   sync: syncConfiguration,
-  backup: backupConfiguration,
   debug: z.boolean().default(false)
 })
 
