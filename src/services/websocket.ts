@@ -92,6 +92,7 @@ export const startWebsocket = (port: number) => {
     sendMessage(ws, 'connection', 'connection-info', getServerInfo())
     listenForServerInfo(ws, true)
     listenForMessages(ws)
+    listenForDisconnect(ws)
   })
 
   wss.on('listening', () => {
@@ -134,6 +135,7 @@ export const connectToServer = (server: RemoteServer, ssl: boolean) => {
       listenForServerInfo(ws, false)
       invokeListeners('connection', 'established', ws, null)
       addConnection(server.name, ws)
+      listenForDisconnect(ws)
     } else {
       closeDuplicateConnection(ws, server.name)
     }
@@ -179,10 +181,33 @@ const addConnection = (name: string, ws: WebSocket) => {
   console.log('Connected to server:', name)
 }
 
+/**
+ * Close a duplicate connection.
+ *
+ * @param ws WebSocket connection.
+ * @param name Name of the connection.
+ */
 const closeDuplicateConnection = (ws: WebSocket, name: string) => {
   logDebug('Connection already exists:', name)
   sendMessage(ws, 'connection', 'error', 'Already connected to server.')
   ws.close()
+}
+
+/**
+ * Listen for socket disconnects.
+ *
+ * @param ws WebSocket connection.
+ */
+const listenForDisconnect = (ws: WebSocket) => {
+  ws.onclose = () => {
+    const name = getConnectionName(ws)
+    if (name) {
+      logDebug('Connection closed:', name)
+      connections.delete(name)
+    } else logDebug('Connection closed for unknown server.')
+
+    invokeListeners('connection', 'close', ws, name)
+  }
 }
 
 /**
@@ -277,4 +302,16 @@ export const sendEvent: OverloadingSendMessageAll<
 > = (type: string, event: string, message: any) => {
   // @ts-expect-error - This is checked by overloading.
   connections.forEach(async (ws) => sendMessage(ws, type, event, message))
+}
+
+/**
+ * Get the name of a connection.
+ *
+ * @param ws WebSocket connection.
+ * @returns Name of the connection or undefined if it doesn't exist.
+ */
+const getConnectionName = (ws: WebSocket) => {
+  for (const [name, connection] of connections)
+    if (connection === ws) return name
+  return undefined
 }

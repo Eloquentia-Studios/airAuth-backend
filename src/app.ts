@@ -1,3 +1,4 @@
+import createDummyData from './lib/createDummyData.js'
 import logDebug from './lib/logDebug.js'
 import { writeDefaultConfig } from './services/config.js'
 import { createServer } from './services/express.js'
@@ -10,6 +11,12 @@ logDebug('Starting server...')
 const configPath = process.env.CONFIG_PATH || './config/config.json'
 writeDefaultConfig(configPath)
 loadKeys()
+
+// Create dummy data.
+if (process.env.DUMMY_DATA === 'true') {
+  console.log('Creating dummy data!')
+  await createDummyData()
+}
 
 // Create a new Express server.
 const app = createServer()

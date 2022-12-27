@@ -4,7 +4,7 @@ import hashObject from '../lib/hashObject.js'
 import logDebug from '../lib/logDebug.js'
 import type { RecordHash } from '../types/RecordHash.d'
 import prisma from './prisma.js'
-import { deleteRecord, updateRecord } from './sync.js'
+import { deleteRecord, sendRecordToSyncedServers } from './sync.js'
 
 /**
  * Add a new OTP to the database.
@@ -28,7 +28,7 @@ export const addOtp = async (url: string, ownerId: string): Promise<Otp> => {
   })
 
   // Send to remote servers.
-  updateRecord('otp', otp)
+  sendRecordToSyncedServers('otp', otp)
 
   return otp
 }
@@ -123,7 +123,7 @@ export const updateOtp = async (
   })
 
   // Send to remote servers.
-  updateRecord('otp', updatedOtp)
+  sendRecordToSyncedServers('otp', updatedOtp)
 
   return updatedOtp
 }
