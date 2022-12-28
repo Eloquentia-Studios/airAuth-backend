@@ -76,7 +76,7 @@ export const backupConfiguration = z
     enabled: z.boolean(),
     interval: z.number().int().min(1),
     path: z.string().trim(),
-    keep: z.number().int().min(1),
+    keep: z.number().int().min(0),
     secret: z.string().min(15).max(512)
   })
   .refine(pathIsValid, {

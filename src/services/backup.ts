@@ -1,6 +1,6 @@
 import { type Backup } from '@prisma/client'
 import { existsSync, lstatSync, mkdirSync } from 'fs'
-import { readFile, writeFile } from 'fs/promises'
+import { readFile, unlink, writeFile } from 'fs/promises'
 import { join as pathJoin } from 'path'
 import serverConfig from '../global/configuration.js'
 import { setDbWritesPaused } from '../global/pauseTraffic.js'
@@ -93,17 +93,6 @@ const restoreFromFile = async (path: string) => {
 }
 
 /**
- * Check if a backup should be restored.
- *
- * @param restoreBackupPath The name of the backup to restore.
- * @returns True if a backup should be restored, false if it should not.
- */
-const shouldRestoreBackup = (restoreBackupPath: string | undefined) => {
-  if (!restoreBackupPath) return false
-  return true
-}
-
-/**
  * Plan the next backup.
  */
 const planNextBackup = async () => {
@@ -140,6 +129,7 @@ const backup = async (prefix = 'backup ') => {
   const filePath = await createBackup(prefix)
   await dbBackupComplete(filePath)
 
+  await cleanBackups()
   planNextBackup()
 }
 
@@ -240,6 +230,30 @@ const addBackupToDb = async (filename: string) => {
 }
 
 /**
+ * Clean up old backups from the database and file system.
+ */
+const cleanBackups = async () => {
+  if (configuration.keep === 0) return
+  const oldBackups = await getOldBackups()
+  console.info(
+    `Cleaning ${oldBackups.length} old backup${
+      oldBackups.length > 1 ? 's' : ''
+    }...`
+  )
+  await Promise.all(oldBackups.map(deleteBackup))
+}
+
+/**
+ * Delete a backup from the database and file system.
+ *
+ * @param backup The backup to delete.
+ */
+const deleteBackup = async (backup: Backup) => {
+  await deleteBackupFromDb(backup)
+  await deleteBackupFromFileSystem(backup)
+}
+
+/**
  * Get the last backup from the database.
  */
 const getLastBackup = async () => {
@@ -249,4 +263,45 @@ const getLastBackup = async () => {
       createdAt: 'desc'
     }
   })
+}
+
+/**
+ * Get old backups from the database.
+ *
+ * @returns The old backups.
+ */
+const getOldBackups = async () => {
+  logDebug('Getting backups from database...')
+  return await prisma.backup.findMany({
+    orderBy: {
+      createdAt: 'desc'
+    },
+    skip: configuration.keep
+  })
+}
+
+/**
+ * Delete a backup from the database.
+ *
+ * @param id The id of the backup to delete.
+ */
+const deleteBackupFromDb = async (backup: Backup) => {
+  logDebug(`Deleting backup from db: ${backup.filename}`)
+  await prisma.backup.delete({
+    where: {
+      id: backup.id
+    }
+  })
+}
+
+/**
+ * Delete a backup file.
+ *
+ * @param backup The backup to delete.
+ */
+const deleteBackupFromFileSystem = async (backup: Backup) => {
+  if (existsSync(backup.filename)) {
+    logDebug(`Deleting backup file: ${backup.filename}`)
+    await unlink(backup.filename)
+  }
 }
