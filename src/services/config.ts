@@ -34,9 +34,7 @@ export const syncConfiguration = z.object({
   ssl: z.boolean(),
   servers: z.array(remoteServer).max(1),
   fullSyncInterval: z.number().int().min(1).max(1440),
-  secret: z.string().min(15).max(512),
-  startDelay: z.number().int().min(0).max(10000),
-  connectOnStart: z.boolean()
+  secret: z.string().min(15).max(512)
 })
 
 export type SyncConfiguration = z.infer<typeof syncConfiguration>

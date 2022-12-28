@@ -47,11 +47,7 @@ export const initSync = () => {
   console.log('Sync is enabled.')
   console.log('Server name: ' + configuration.server.name)
 
-  // Wait for the start delay.
-  setTimeout(() => {
-    // Setup all websocket connections.
-    setupSyncWebsocket()
-  }, configuration.startDelay)
+  setupSyncWebsocket()
 }
 
 /**
@@ -64,7 +60,7 @@ export const sendRecordHashes = async (ws: WebSocket): Promise<void> => {
   setDbWritesPausedBy(true, ws)
 
   logDebug('Sending record hashes to ' + ws.url + '...')
-  const recordHashes = await getAllRecordHashes()
+  const recordHashes = await getAllRecordHashes(excludedTables)
   sendMessage(ws, 'sync', 'recordHashes', recordHashes)
 }
 
@@ -196,11 +192,8 @@ const setupSyncWebsocket = () => {
   setupListeners()
   startWebsocket(configuration.server.port)
 
-  // Connect to remote servers.
-  if (configuration.connectOnStart) {
-    logDebug('Connecting to remote servers...')
-    connectToServers(configuration.servers, configuration.ssl)
-  }
+  logDebug('Connecting to remote servers...')
+  connectToServers(configuration.servers, configuration.ssl)
 }
 
 /**
@@ -218,7 +211,7 @@ const recieveRecordHashes = async (
   setDbWritesPausedBy(true, ws)
 
   // Compare remote and local tables.
-  const localRecordHashes = await getAllRecordHashes()
+  const localRecordHashes = await getAllRecordHashes(excludedTables)
   const remoteTableNames = Object.keys(remoteRecordHashes) as TableNamesList
   const localTableNames = Object.keys(localRecordHashes) as TableNamesList
   if (!arraysAreEqual(remoteTableNames, localTableNames))

@@ -22,9 +22,7 @@ export const defaultConfig: ServerConfiguration = {
     ],
     ssl: false,
     fullSyncInterval: 30,
-    secret: 'THIS-SHOULD-BE-RANDOMLY-GENERATED',
-    startDelay: 0,
-    connectOnStart: true
+    secret: 'THIS-SHOULD-BE-RANDOMLY-GENERATED'
   },
   debug: false
 }
@@ -60,11 +58,7 @@ export const defaultConfigComments = {
     fullSyncInterval:
       'The time between full database syncs to run during runtime. Zero to disable. UNIT: min DEFAULT: 30',
     secret:
-      'A secret which should be shared between all servers. This should be generated using a tool such as: https://www.random.org/strings/?num=5&len=20&digits=on&upperalpha=on&loweralpha=on&format=plain',
-    startDelay:
-      'Delays the start of the synchronization service. Used for development. UNIT: ms DEFAULT: 0',
-    connectOnStart:
-      "Wheather or not the server should try to connect to remote servers on start. Used for development. This should be left on 'true' in almost all cases. DEFAULT: true"
+      'A secret which should be shared between all servers. This should be generated using a tool such as: https://www.random.org/strings/?num=5&len=20&digits=on&upperalpha=on&loweralpha=on&format=plain'
   },
   debug:
     'By setting to true in the server configuration it enables more logging during runtime.'

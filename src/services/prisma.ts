@@ -27,13 +27,14 @@ export const tablePriority: {
  *
  * @returns Record hashes.
  */
-export const getAllRecordHashes = async () => {
+export const getAllRecordHashes = async (exclude: TableNamesList = []) => {
   logDebug('Getting all record hashes.')
   const modelNames = getAllModels()
   const recordHashes: RecordHashes = {}
 
   await Promise.all(
     modelNames.map(async (modelName) => {
+      if (exclude.includes(modelName)) return
       // @ts-ignore - Prisma model names are dynamic.
       recordHashes[modelName] = await prisma[modelName].findMany({
         select: {
