@@ -1,6 +1,6 @@
-import type { ServerConfiguration } from '../services/config.js'
+import type { ServerConfigurationInput } from '../services/config.js'
 
-export const defaultConfig: ServerConfiguration = {
+export const defaultConfig: ServerConfigurationInput = {
   backup: {
     enabled: false,
     interval: 72,

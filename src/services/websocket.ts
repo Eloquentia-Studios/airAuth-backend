@@ -10,7 +10,7 @@ import type {
 } from '../types/Overload.d'
 import type SocketListeners from './../types/SocketListeners.d'
 import type { RemoteServer } from './config'
-import { getServerInfo } from './sync.js'
+import { getServerByName, getServerInfo, getSSL } from './sync.js'
 
 // Websocket server and connections.
 let wss: WebSocketServer | null = null
@@ -106,10 +106,10 @@ export const startWebsocket = (port: number) => {
  *
  * @param servers Array of remote servers.
  */
-export const connectToServers = (servers: RemoteServer[], ssl: boolean) => {
+export const connectToServers = (servers: RemoteServer[]) => {
   logDebug('Connecting to remote servers...')
   for (const server of servers) {
-    connectToServer(server, ssl)
+    connectToServer(server)
   }
 }
 
@@ -118,9 +118,9 @@ export const connectToServers = (servers: RemoteServer[], ssl: boolean) => {
  *
  * @param server Remote server.
  */
-export const connectToServer = (server: RemoteServer, ssl: boolean) => {
+export const connectToServer = (server: RemoteServer) => {
   logDebug('Connecting to remote server:', server.name)
-  const protocol = ssl ? 'wss' : 'ws'
+  const protocol = getSSL() ? 'wss' : 'ws'
   const setProtocol = server.address.split('://')[0]
   if (setProtocol !== protocol && setProtocol.length <= 3)
     return console.log('Invalid protocol for server in config:', server.name)
@@ -147,6 +147,8 @@ export const connectToServer = (server: RemoteServer, ssl: boolean) => {
     console.log('Unable to connect to server:', server.name)
     logDebug(`Websocket error for '${server.name}':`, e.message)
   }
+
+  return ws
 }
 
 /**
@@ -207,7 +209,38 @@ const listenForDisconnect = (ws: WebSocket) => {
     } else console.info('Connection closed for unknown server.')
 
     invokeListeners('connection', 'close', ws, name)
+
+    tryToReconnect(ws, name)
   }
+}
+
+/**
+ * Try to reconnect to a server.
+ *
+ * @param ws WebSocket connection.
+ * @param name Name of the connection.
+ * @param count Number of times the connection has been attempted.
+ */
+const tryToReconnect = (
+  old: WebSocket,
+  name: string | undefined,
+  count: number = 0
+) => {
+  if (count > 10) return console.log('Unable to reconnect to server:', name)
+  const server = getServerByName(name as string)
+  if (!server) return logDebug('Unable to find server by name:', name)
+
+  const ws = connectToServer(server)
+  if (!ws) return logDebug('Connect to server returned void!')
+
+  const interval = setInterval(() => {
+    if (ws.readyState === ws.OPEN) clearInterval(interval)
+    else if (ws.readyState === ws.CLOSED) {
+      logDebug('Unable to reconnect to server:', name)
+      clearInterval(interval)
+      tryToReconnect(old, name, count + 1)
+    }
+  }, 1000)
 }
 
 /**
