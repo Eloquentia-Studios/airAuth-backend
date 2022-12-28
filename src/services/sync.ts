@@ -1,4 +1,4 @@
-import type WebSocket from 'ws'
+import WebSocket from 'ws'
 import serverConfig from '../global/configuration.js'
 import { setDbWritesPausedBy } from '../global/pauseTraffic.js'
 import arraysAreEqual from '../lib/arraysAreEqual.js'
@@ -591,6 +591,8 @@ const handleNewerRecordsResponse = async (ws: WebSocket, success: boolean) => {
  * @param ws Websocket connection.
  */
 const runIntermittentSync = async (ws: WebSocket) => {
+  if (ws.readyState !== WebSocket.OPEN)
+    return logDebug('Skipping intermittent sync because websocket is not open.')
   console.log('Running intermittent sync...')
   return await sendRecordHashes(ws)
 }
