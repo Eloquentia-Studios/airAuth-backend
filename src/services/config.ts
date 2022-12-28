@@ -1,36 +1,14 @@
+import {
+  parseJsonWithComments,
+  stringifyJsonWithComments
+} from '@eloquentiastudios/commentable-json'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { z } from 'zod'
+import {
+  defaultConfig,
+  defaultConfigComments
+} from '../global/defaultConfig.js'
 import { isDirectory, isValidPath } from './validate.js'
-
-// Define the default configuration.
-const defaultConfig: ServerConfiguration = {
-  backup: {
-    enabled: false,
-    interval: 72,
-    path: './backups/',
-    keep: 10,
-    secret: 'THIS-SHOULD-BE-RANDOMLY-GENERATED'
-  },
-  sync: {
-    enabled: false,
-    server: {
-      name: 'SERVER-NAME',
-      port: 7070
-    },
-    servers: [
-      {
-        name: 'SECOND-SERVER-NAME',
-        address: 'server.two:7070'
-      }
-    ],
-    ssl: false,
-    fullSyncInterval: 30,
-    secret: 'THIS-SHOULD-BE-RANDOMLY-GENERATED',
-    startDelay: 0,
-    connectOnStart: true
-  },
-  debug: false
-}
 
 /**
  * Remote server configuration schema.
@@ -107,7 +85,8 @@ export const writeDefaultConfig = (path: string) => {
   if (existsSync(path)) return
 
   // Write the file.
-  writeFileSync(path, JSON.stringify(defaultConfig, null, 2))
+  const json = stringifyJsonWithComments(defaultConfig, defaultConfigComments)
+  writeFileSync(path, json)
   console.log('Default configuration file written to:', path)
 }
 
@@ -123,7 +102,7 @@ export const readConfig = () => {
     throw new Error(`Configuration file not found at '${configPath}'`)
 
   // Read the file.
-  const config = JSON.parse(readFileSync(configPath, 'utf-8'))
+  const config = parseJsonWithComments(readFileSync(configPath, 'utf-8'))
 
   const validatedConfig = serverConfiguration.safeParse(config)
 
