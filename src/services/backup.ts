@@ -1,5 +1,5 @@
 import { type Backup } from '@prisma/client'
-import { existsSync, mkdirSync } from 'fs'
+import { existsSync, lstatSync, mkdirSync } from 'fs'
 import { readFile, writeFile } from 'fs/promises'
 import { join as pathJoin } from 'path'
 import serverConfig from '../global/configuration.js'
@@ -33,26 +33,73 @@ export const initBackup = async () => {
  *
  * @returns True if the database was restored, false if it was not.
  */
-export const restoreBackup = async () => {
+export const restoreBackup = async (): Promise<boolean> => {
   configuration = serverConfig.backup
+  const restoreBackupName = process.env.RESTORE_BACKUP
+  if (!restoreBackupName) return false
 
-  // Check if a backup should be restored.
-  const restoreBackup = process.env.RESTORE_BACKUP
-  if (!restoreBackup) return false
-  if (!existsSync(pathJoin(configuration.path, restoreBackup))) return false
+  const restoreBackupPath = pathJoin(configuration.path, restoreBackupName)
+  if (!backupFileExists(restoreBackupPath)) {
+    console.error('Backup file does not exist.')
+    return true
+  }
 
+  await createRestoreBackup()
+  await cleanDatabase()
+  await restoreFromFile(restoreBackupPath)
+
+  console.log('Database restored from', restoreBackupName)
+  return true
+}
+
+/**
+ * Check if a backup file exists.
+ *
+ * @param path The path to the backup file.
+ * @returns True if the file exists, false if it does not.
+ */
+const backupFileExists = (path: string) => {
+  if (!existsSync(path)) return false
+  if (!lstatSync(path).isFile()) return false
+  return true
+}
+
+/**
+ * Create a backup before restoring.
+ */
+const createRestoreBackup = async () => {
   console.log(`Creating backup before restoring...`)
   await backup('restore ')
+}
 
-  console.log(`Dropping all tables...`)
+/**
+ * Drop all records from the database.
+ */
+const cleanDatabase = async () => {
+  console.log(`Cleaning database...`)
   await dropAllRecords()
+}
 
-  console.log(`Restoring backup from file '${restoreBackup}'...`)
-  const backupPath = pathJoin(configuration.path, restoreBackup)
-  const encryptedBackupData = await readFile(backupPath)
+/**
+ * Restore the database from a backup file.
+ *
+ * @param path The path to the backup file.
+ */
+const restoreFromFile = async (path: string) => {
+  console.log(`Restoring backup from file '${path}'...`)
+  const encryptedBackupData = await readFile(path)
   const backupData = await decryptData(encryptedBackupData.toString())
   await applyAllRecords(backupData)
+}
 
+/**
+ * Check if a backup should be restored.
+ *
+ * @param restoreBackupPath The name of the backup to restore.
+ * @returns True if a backup should be restored, false if it should not.
+ */
+const shouldRestoreBackup = (restoreBackupPath: string | undefined) => {
+  if (!restoreBackupPath) return false
   return true
 }
 
@@ -90,16 +137,46 @@ const backup = async (prefix = 'backup ') => {
   await waitForDb('backup')
   setDbWritesPaused(true)
 
+  const filePath = await createBackup(prefix)
+  await dbBackupComplete(filePath)
+
+  planNextBackup()
+}
+
+/**
+ * Create and save a backup to file and database.
+ *
+ * @param prefix The prefix to use for the backup file name.
+ * @returns The file path of the backup.
+ */
+const createBackup = async (prefix: string): Promise<string> => {
   const rawData = await getAllRecords()
   const encryptedData = await encryptData(rawData)
+  return await writeBackup(encryptedData, prefix)
+}
 
+/**
+ * Write the backup to file.
+ *
+ * @param encryptedData Encrypted data to write to file.
+ * @param prefix The prefix to use for the backup file name.
+ * @returns The file path of the backup.
+ */
+const writeBackup = async (encryptedData: string, prefix: string) => {
   createBackupFolder()
   const filePath = createFilePath(prefix)
   await writeFile(filePath, encryptedData)
+  return filePath
+}
 
+/**
+ * Add the backup to the database and resume database writes.
+ *
+ * @param filePath The file path of the backup.
+ */
+const dbBackupComplete = async (filePath: string) => {
   await addBackupToDb(filePath)
   setDbWritesPaused(false)
-  planNextBackup()
 }
 
 /**
