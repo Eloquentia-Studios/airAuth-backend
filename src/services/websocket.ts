@@ -118,7 +118,7 @@ export const connectToServers = (servers: RemoteServer[]) => {
  *
  * @param server Remote server.
  */
-export const connectToServer = (server: RemoteServer) => {
+export const connectToServer = (server: RemoteServer, log = true) => {
   logDebug('Connecting to remote server:', server.name)
   const protocol = getSSL() ? 'wss' : 'ws'
   const setProtocol = server.address.split('://')[0]
@@ -144,7 +144,7 @@ export const connectToServer = (server: RemoteServer) => {
   // Handle errors.
   ws.onerror = (e) => {
     invokeListeners('connection', 'error', ws, server)
-    console.log('Unable to connect to server:', server.name)
+    if (log) console.log('Unable to connect to server:', server.name)
     logDebug(`Websocket error for '${server.name}':`, e.message)
   }
 
@@ -230,7 +230,7 @@ const tryToReconnect = (
   const server = getServerByName(name as string)
   if (!server) return logDebug('Unable to find server by name:', name)
 
-  const ws = connectToServer(server)
+  const ws = connectToServer(server, false)
   if (!ws) return logDebug('Connect to server returned void!')
 
   const interval = setInterval(() => {
