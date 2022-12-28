@@ -1,8 +1,9 @@
 import type WebSocket from 'ws'
 import serverConfig from '../global/configuration.js'
-import { dbWritesPaused, setDbWritesPausedBy } from '../global/pauseTraffic.js'
+import { setDbWritesPausedBy } from '../global/pauseTraffic.js'
 import arraysAreEqual from '../lib/arraysAreEqual.js'
 import logDebug from '../lib/logDebug.js'
+import waitForDb from '../lib/waitForDb.js'
 import type {
   RecordComparison,
   RecordComparisons
@@ -14,13 +15,14 @@ import type {
   TableNamesList
 } from '../types/RecordHash.js'
 import DatabaseRecord from './../types/DatabaseRecord.d'
-import type { SyncConfiguration } from './config'
+import { type SyncConfiguration } from './config.js'
 import {
   applyRecords,
   deleteRecord as deleteRecordFromDatabase,
   getAllRecordHashes,
   getRecord,
-  getRecords
+  getRecords,
+  tablePriority
 } from './prisma.js'
 import {
   connectToServers,
@@ -31,27 +33,18 @@ import {
 } from './websocket.js'
 
 let configuration: SyncConfiguration
-
-// Prioritization of tables.
-const tableSyncPriority: {
-  singleThreaded: TableNamesList
-  multiThreaded: TableNamesList
-} = {
-  singleThreaded: ['user'],
-  multiThreaded: ['otp', 'keyPair']
-}
+const excludedTables: TableNamesList = ['backup']
 
 /**
  * Initialize the sync service.
  */
 export const initSync = () => {
   logDebug('Initializing sync service...')
-  configuration = serverConfig.sync
-
   // Check if the sync service is enabled.
-  if (!configuration.enabled) return console.log('Sync service is disabled.')
+  configuration = serverConfig.sync
+  if (!configuration.enabled) return console.log('Sync is disabled.')
 
-  console.log('Sync service is enabled.')
+  console.log('Sync is enabled.')
   console.log('Server name: ' + configuration.server.name)
 
   // Wait for the start delay.
@@ -67,13 +60,7 @@ export const initSync = () => {
  * @param ws Websocket to send the message via.
  */
 export const sendRecordHashes = async (ws: WebSocket): Promise<void> => {
-  // Wait until the database is ready. Prevents issues with multiple running syncs.
-  if (dbWritesPaused()) {
-    setTimeout(() => sendRecordHashes(ws), 2500)
-    return
-  }
-
-  // Pause writes to the database.
+  await waitForDb('sendRecordHashes')
   setDbWritesPausedBy(true, ws)
 
   logDebug('Sending record hashes to ' + ws.url + '...')
@@ -142,6 +129,8 @@ const recieveRecordUpdate = async (
   _: WebSocket,
   { tableName, record }: { tableName: TableNames; record: DatabaseRecord }
 ) => {
+  await waitForDb('recieveRecordUpdate')
+
   logDebug('Recieved record update, table:', tableName, 'record:', record)
   const currentRecord = await getRecord(tableName, record.id)
   logDebug('Current record:', currentRecord)
@@ -172,6 +161,8 @@ const recieveRecordDeletion = async (
   _: WebSocket,
   { tableName, id, time }: { tableName: TableNames; id: string; time: number }
 ) => {
+  await waitForDb('recieveRecordDeletion')
+
   logDebug(
     'Recieved record deletion, table:',
     tableName,
@@ -356,7 +347,8 @@ const applySingleThreadedRecords = async (
   toSend: RecordComparisons
 ) => {
   // Apply the records.
-  for (const tableName of tableSyncPriority.singleThreaded) {
+  for (const tableName of tablePriority.ordered) {
+    if (excludedTables.includes(tableName)) continue
     logDebug(
       'Applying records for table:',
       tableName,
@@ -381,7 +373,8 @@ const applyMultiThreadedRecords = async (
 ) => {
   // Apply the records.
   await Promise.all(
-    tableSyncPriority.multiThreaded.map(async (tableName) => {
+    tablePriority.unordererd.map(async (tableName) => {
+      if (excludedTables.includes(tableName)) return
       await applyAndCompareRemoteRecords(tableName, records, toSend)
     })
   )
@@ -461,7 +454,8 @@ const applyNewerRecordsToDbSingleThreaded = async (
   records: RecordComparisons
 ) => {
   // Apply the records.
-  for (const tableName of tableSyncPriority.singleThreaded) {
+  for (const tableName of tablePriority.ordered) {
+    if (excludedTables.includes(tableName)) continue
     await applyNewerRecordsToDb(tableName, records)
   }
 }
@@ -476,7 +470,8 @@ const applyNewerRecordsToDbMultiThreaded = async (
 ) => {
   // Apply the records.
   await Promise.all(
-    tableSyncPriority.multiThreaded.map(async (tableName) => {
+    tablePriority.unordererd.map(async (tableName) => {
+      if (excludedTables.includes(tableName)) return
       await applyNewerRecordsToDb(tableName, records)
     })
   )

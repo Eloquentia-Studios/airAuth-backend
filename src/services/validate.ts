@@ -1,3 +1,4 @@
+import { existsSync, lstatSync } from 'fs'
 import validator from 'validator'
 import { getUser } from './users.js'
 
@@ -181,4 +182,28 @@ export const isNullOrUndefined = (value: any): boolean => {
  */
 export const isString = (value: string): boolean => {
   return typeof value === 'string'
+}
+
+/**
+ * Checks if the given string is a valid path.
+ *
+ * @param path Path to check.
+ * @returns True if the path is valid, false otherwise.
+ */
+export const isValidPath = (path: any): boolean => {
+  if (!isString(path)) return false
+  if (path.length === 0) return false
+
+  const dirRegex = /^(\.)?(\/)?([a-z0-9]+\/)*[a-z0-9\.]+\/?$/i
+  if (dirRegex.test(path)) return true
+  return false
+}
+
+export const isDirectory = (path: any): boolean => {
+  if (!isString(path)) return false
+  if (path.length === 0) return false
+
+  if (!existsSync(path)) return true
+  if (lstatSync(path).isDirectory()) return true
+  return false
 }

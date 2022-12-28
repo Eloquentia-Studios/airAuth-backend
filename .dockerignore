@@ -46,3 +46,6 @@ config/
 
 # Docker volumes
 volumes/
+
+# Backup files
+backups/

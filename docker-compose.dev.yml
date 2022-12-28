@@ -12,6 +12,8 @@ networks:
 services:
   postgres1:
     image: postgres:14-alpine
+    ports:
+      - 5432:5432
     environment:
       - POSTGRES_DB=airAuth
       - POSTGRES_USER=postgres
