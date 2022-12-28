@@ -36,6 +36,7 @@ export const initBackup = async () => {
 export const restoreBackup = async (): Promise<boolean> => {
   configuration = serverConfig.backup
   const restoreBackupName = process.env.RESTORE_BACKUP
+  logDebug('Restore backup name:', restoreBackupName)
   if (!restoreBackupName) return false
 
   const restoreBackupPath = pathJoin(configuration.path, restoreBackupName)
@@ -48,7 +49,7 @@ export const restoreBackup = async (): Promise<boolean> => {
   await cleanDatabase()
   await restoreFromFile(restoreBackupPath)
 
-  console.log('Database restored from', restoreBackupName)
+  console.info('Database restored from', restoreBackupName)
   return true
 }
 
@@ -68,7 +69,7 @@ const backupFileExists = (path: string) => {
  * Create a backup before restoring.
  */
 const createRestoreBackup = async () => {
-  console.log(`Creating backup before restoring...`)
+  console.info(`Creating backup before restoring...`)
   await backup('restore ')
 }
 
@@ -76,7 +77,7 @@ const createRestoreBackup = async () => {
  * Drop all records from the database.
  */
 const cleanDatabase = async () => {
-  console.log(`Cleaning database...`)
+  console.info(`Cleaning database...`)
   await dropAllRecords()
 }
 
@@ -86,7 +87,7 @@ const cleanDatabase = async () => {
  * @param path The path to the backup file.
  */
 const restoreFromFile = async (path: string) => {
-  console.log(`Restoring backup from file '${path}'...`)
+  console.info(`Restoring backup from file '${path}'...`)
   const encryptedBackupData = await readFile(path)
   const backupData = await decryptData(encryptedBackupData.toString())
   await applyAllRecords(backupData)
@@ -140,6 +141,7 @@ const backup = async (prefix = 'backup ') => {
  * @returns The file path of the backup.
  */
 const createBackup = async (prefix: string): Promise<string> => {
+  logDebug('Creating backup...')
   const rawData = await getAllRecords()
   const encryptedData = await encryptData(rawData)
   return await writeBackup(encryptedData, prefix)
@@ -165,6 +167,7 @@ const writeBackup = async (encryptedData: string, prefix: string) => {
  * @param filePath The file path of the backup.
  */
 const dbBackupComplete = async (filePath: string) => {
+  logDebug('Adding backup to database...')
   await addBackupToDb(filePath)
   setDbWritesPaused(false)
 }
