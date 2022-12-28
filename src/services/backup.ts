@@ -3,6 +3,7 @@ import { existsSync, mkdirSync } from 'fs'
 import { readFile, writeFile } from 'fs/promises'
 import { join as pathJoin } from 'path'
 import serverConfig from '../global/configuration.js'
+import { setDbWritesPaused } from '../global/pauseTraffic.js'
 import logDebug from '../lib/logDebug.js'
 import waitForDb from '../lib/waitForDb.js'
 import type { Records } from '../types/Records.js'
@@ -86,7 +87,8 @@ const calculateTimeUntilNextBackup = (lastBackup: Backup | null) => {
  * Create a backup.
  */
 const backup = async (prefix = 'backup ') => {
-  if (waitForDb(backup)) return
+  await waitForDb('backup')
+  setDbWritesPaused(true)
 
   const rawData = await getAllRecords()
   const encryptedData = await encryptData(rawData)
@@ -96,6 +98,7 @@ const backup = async (prefix = 'backup ') => {
   await writeFile(filePath, encryptedData)
 
   await addBackupToDb(filePath)
+  setDbWritesPaused(false)
   planNextBackup()
 }
 

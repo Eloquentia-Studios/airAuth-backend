@@ -59,7 +59,7 @@ export const initSync = () => {
  * @param ws Websocket to send the message via.
  */
 export const sendRecordHashes = async (ws: WebSocket): Promise<void> => {
-  if (waitForDb(sendRecordHashes, ws)) return
+  await waitForDb('sendRecordHashes')
   setDbWritesPausedBy(true, ws)
 
   logDebug('Sending record hashes to ' + ws.url + '...')
@@ -128,7 +128,7 @@ const recieveRecordUpdate = async (
   _: WebSocket,
   { tableName, record }: { tableName: TableNames; record: DatabaseRecord }
 ) => {
-  if (waitForDb(recieveRecordUpdate, _, { tableName, record })) return
+  await waitForDb('recieveRecordUpdate')
 
   logDebug('Recieved record update, table:', tableName, 'record:', record)
   const currentRecord = await getRecord(tableName, record.id)
@@ -160,7 +160,7 @@ const recieveRecordDeletion = async (
   _: WebSocket,
   { tableName, id, time }: { tableName: TableNames; id: string; time: number }
 ) => {
-  if (waitForDb(recieveRecordDeletion, _, { tableName, id, time })) return
+  await waitForDb('recieveRecordDeletion')
 
   logDebug(
     'Recieved record deletion, table:',
