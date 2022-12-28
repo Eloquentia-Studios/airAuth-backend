@@ -33,6 +33,7 @@ import {
 } from './websocket.js'
 
 let configuration: SyncConfiguration
+const excludedTables: TableNamesList = ['backup']
 
 /**
  * Initialize the sync service.
@@ -347,6 +348,7 @@ const applySingleThreadedRecords = async (
 ) => {
   // Apply the records.
   for (const tableName of tablePriority.ordered) {
+    if (excludedTables.includes(tableName)) continue
     logDebug(
       'Applying records for table:',
       tableName,
@@ -372,6 +374,7 @@ const applyMultiThreadedRecords = async (
   // Apply the records.
   await Promise.all(
     tablePriority.unordererd.map(async (tableName) => {
+      if (excludedTables.includes(tableName)) return
       await applyAndCompareRemoteRecords(tableName, records, toSend)
     })
   )
@@ -452,6 +455,7 @@ const applyNewerRecordsToDbSingleThreaded = async (
 ) => {
   // Apply the records.
   for (const tableName of tablePriority.ordered) {
+    if (excludedTables.includes(tableName)) continue
     await applyNewerRecordsToDb(tableName, records)
   }
 }
@@ -467,6 +471,7 @@ const applyNewerRecordsToDbMultiThreaded = async (
   // Apply the records.
   await Promise.all(
     tablePriority.unordererd.map(async (tableName) => {
+      if (excludedTables.includes(tableName)) return
       await applyNewerRecordsToDb(tableName, records)
     })
   )
