@@ -64,7 +64,7 @@ export const sendRecordHashes = async (ws: WebSocket): Promise<void> => {
   setDbWritesPausedBy(true, ws)
 
   logDebug('Sending record hashes to ' + ws.url + '...')
-  const recordHashes = await getAllRecordHashes()
+  const recordHashes = await getAllRecordHashes(excludedTables)
   sendMessage(ws, 'sync', 'recordHashes', recordHashes)
 }
 
@@ -218,7 +218,7 @@ const recieveRecordHashes = async (
   setDbWritesPausedBy(true, ws)
 
   // Compare remote and local tables.
-  const localRecordHashes = await getAllRecordHashes()
+  const localRecordHashes = await getAllRecordHashes(excludedTables)
   const remoteTableNames = Object.keys(remoteRecordHashes) as TableNamesList
   const localTableNames = Object.keys(localRecordHashes) as TableNamesList
   if (!arraysAreEqual(remoteTableNames, localTableNames))

@@ -202,9 +202,9 @@ const listenForDisconnect = (ws: WebSocket) => {
   ws.onclose = () => {
     const name = getConnectionName(ws)
     if (name) {
-      logDebug('Connection closed:', name)
+      console.info('Disconnected from server:', name)
       connections.delete(name)
-    } else logDebug('Connection closed for unknown server.')
+    } else console.info('Connection closed for unknown server.')
 
     invokeListeners('connection', 'close', ws, name)
   }
