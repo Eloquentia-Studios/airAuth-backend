@@ -1,6 +1,6 @@
 {
   "name": "airauth-backend",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "",
   "type": "module",
   "main": "index.js",
@@ -29,6 +29,7 @@
     "typescript": "4.7.3"
   },
   "dependencies": {
+    "@eloquentiastudios/commentable-json": "^1.0.1",
     "@prisma/client": "^3.15.2",
     "argon2": "^0.28.7",
     "dayjs": "^1.11.7",
