@@ -21,7 +21,8 @@ import {
   deleteRecord as deleteRecordFromDatabase,
   getAllRecordHashes,
   getRecord,
-  getRecords
+  getRecords,
+  tablePriority
 } from './prisma.js'
 import {
   connectToServers,
@@ -32,15 +33,6 @@ import {
 } from './websocket.js'
 
 let configuration: SyncConfiguration
-
-// Prioritization of tables.
-const tableSyncPriority: {
-  singleThreaded: TableNamesList
-  multiThreaded: TableNamesList
-} = {
-  singleThreaded: ['user'],
-  multiThreaded: ['otp', 'keyPair']
-}
 
 /**
  * Initialize the sync service.
@@ -354,7 +346,7 @@ const applySingleThreadedRecords = async (
   toSend: RecordComparisons
 ) => {
   // Apply the records.
-  for (const tableName of tableSyncPriority.singleThreaded) {
+  for (const tableName of tablePriority.ordered) {
     logDebug(
       'Applying records for table:',
       tableName,
@@ -379,7 +371,7 @@ const applyMultiThreadedRecords = async (
 ) => {
   // Apply the records.
   await Promise.all(
-    tableSyncPriority.multiThreaded.map(async (tableName) => {
+    tablePriority.unordererd.map(async (tableName) => {
       await applyAndCompareRemoteRecords(tableName, records, toSend)
     })
   )
@@ -459,7 +451,7 @@ const applyNewerRecordsToDbSingleThreaded = async (
   records: RecordComparisons
 ) => {
   // Apply the records.
-  for (const tableName of tableSyncPriority.singleThreaded) {
+  for (const tableName of tablePriority.ordered) {
     await applyNewerRecordsToDb(tableName, records)
   }
 }
@@ -474,7 +466,7 @@ const applyNewerRecordsToDbMultiThreaded = async (
 ) => {
   // Apply the records.
   await Promise.all(
-    tableSyncPriority.multiThreaded.map(async (tableName) => {
+    tablePriority.unordererd.map(async (tableName) => {
       await applyNewerRecordsToDb(tableName, records)
     })
   )

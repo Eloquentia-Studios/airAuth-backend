@@ -2,6 +2,9 @@ import { addOtp } from '../services/otp.js'
 import { createUser } from '../services/users.js'
 
 const createDummyData = async () => {
+  if (process.env.DUMMY_DATA !== 'true') return
+  console.log('Adding dummy data...')
+
   // Create 100 users.
   let seed = Math.floor(Math.random() * 10000000)
   for (let i = 0; i < 100; i++) {

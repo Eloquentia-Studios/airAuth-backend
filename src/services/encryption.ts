@@ -85,6 +85,23 @@ export const symmetricEncrypt = async (data: any, key: string) => {
 }
 
 /**
+ * Decrypt a string symmentrically using a key.
+ *
+ * @param data Data to decrypt.
+ * @param key Key to use for decryption.
+ * @returns Decrypted data.
+ */
+export const symmetricDecrypt = async (data: any, key: string) => {
+  const keyString = createKeyString(key)
+  const cipher = createDecipher(keyString, data)
+
+  const decrypted = cipher.update(data, 'hex', 'utf8')
+  const final = cipher.final()
+
+  return `${decrypted}${final}`
+}
+
+/**
  * SHA256 hash a string.
  *
  * @param data Data to hash.
@@ -120,4 +137,28 @@ const createCipher = (keyString: string) => {
 
   // Create and return cipher.
   return crypto.createCipheriv('aes-256-gcm', keyString, process.env.CIPHER_IV)
+}
+
+/**
+ * Create a aes-256-gcm decipher.
+ *
+ * @param keyString Key string.
+ * @param data Data to decrypt.
+ */
+const createDecipher = (keyString: string, data: string) => {
+  // Check for IV in environment variables.
+  if (!process.env.CIPHER_IV) throw new Error('Cipher IV not set')
+
+  // Create decipher.
+  const decipher = crypto.createDecipheriv(
+    'aes-256-gcm',
+    keyString,
+    process.env.CIPHER_IV
+  )
+
+  // Set auth tag.
+  const authTag = data.split('auth ')[1]
+  decipher.setAuthTag(Buffer.from(authTag, 'hex'))
+
+  return decipher
 }

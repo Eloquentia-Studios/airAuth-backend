@@ -1,6 +1,6 @@
 import { type Backup } from '@prisma/client'
 import { existsSync, mkdirSync } from 'fs'
-import { writeFile } from 'fs/promises'
+import { readFile, writeFile } from 'fs/promises'
 import { join as pathJoin } from 'path'
 import serverConfig from '../global/configuration.js'
 import logDebug from '../lib/logDebug.js'
@@ -8,8 +8,12 @@ import waitForDb from '../lib/waitForDb.js'
 import type { Records } from '../types/Records.js'
 import { hours } from './../global/time.js'
 import { type BackupConfiguration } from './config.js'
-import { symmetricEncrypt } from './encryption.js'
-import prisma, { getAllRecords } from './prisma.js'
+import { symmetricDecrypt, symmetricEncrypt } from './encryption.js'
+import prisma, {
+  applyAllRecords,
+  dropAllRecords,
+  getAllRecords
+} from './prisma.js'
 import { pathSafeDateTime } from './time.js'
 
 let configuration: BackupConfiguration
@@ -19,9 +23,36 @@ let configuration: BackupConfiguration
  */
 export const initBackup = async () => {
   logDebug('Initializing backup service...')
-  configuration = serverConfig.backup
   if (!configuration.enabled) return console.log('Backups are disabled.')
   planNextBackup()
+}
+
+/**
+ * Restore the database from the a backup.
+ *
+ * @returns True if the database was restored, false if it was not.
+ */
+export const restoreBackup = async () => {
+  configuration = serverConfig.backup
+
+  // Check if a backup should be restored.
+  const restoreBackup = process.env.RESTORE_BACKUP
+  if (!restoreBackup) return false
+  if (!existsSync(pathJoin(configuration.path, restoreBackup))) return false
+
+  console.log(`Creating backup before restoring...`)
+  await backup('restore ')
+
+  console.log(`Dropping all tables...`)
+  await dropAllRecords()
+
+  console.log(`Restoring backup from file '${restoreBackup}'...`)
+  const backupPath = pathJoin(configuration.path, restoreBackup)
+  const encryptedBackupData = await readFile(backupPath)
+  const backupData = await decryptData(encryptedBackupData.toString())
+  await applyAllRecords(backupData)
+
+  return true
 }
 
 /**
@@ -54,14 +85,14 @@ const calculateTimeUntilNextBackup = (lastBackup: Backup | null) => {
 /**
  * Create a backup.
  */
-const backup = async () => {
+const backup = async (prefix = 'backup ') => {
   if (waitForDb(backup)) return
 
   const rawData = await getAllRecords()
   const encryptedData = await encryptData(rawData)
 
   createBackupFolder()
-  const filePath = createFilePath()
+  const filePath = createFilePath(prefix)
   await writeFile(filePath, encryptedData)
 
   await addBackupToDb(filePath)
@@ -81,6 +112,18 @@ const encryptData = async (data: Records) => {
 }
 
 /**
+ * Decrypt the data.
+ *
+ * @param data The data to decrypt.
+ * @returns The decrypted data.
+ */
+const decryptData = async (data: string) => {
+  logDebug('Decrypting data...')
+  const json = await symmetricDecrypt(data, configuration.secret)
+  return JSON.parse(json)
+}
+
+/**
  * Create backup folder if it does not exist.
  */
 const createBackupFolder = () => {
@@ -95,8 +138,8 @@ const createBackupFolder = () => {
  *
  * @returns The file path for the new backup.
  */
-const createFilePath = () => {
-  const filename = `${pathSafeDateTime(new Date())}.bak.enc`
+const createFilePath = (prefix: string) => {
+  const filename = `${prefix} ${pathSafeDateTime(new Date())}.bak.enc`
   const backupFilePath = pathJoin(configuration.path, filename)
   logDebug(`Creating backup file: ${backupFilePath}`)
   return backupFilePath

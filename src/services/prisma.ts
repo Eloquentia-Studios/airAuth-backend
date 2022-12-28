@@ -1,4 +1,5 @@
 import Prisma from '@prisma/client'
+import clone from '../lib/clone.js'
 import logDebug from '../lib/logDebug.js'
 import type DatabaseRecord from '../types/DatabaseRecord.d'
 import type {
@@ -11,6 +12,15 @@ import type { Records } from './../types/Records.d'
 
 const prisma = new Prisma.PrismaClient()
 export default prisma
+
+// Prioritization of tables.
+export const tablePriority: {
+  ordered: TableNamesList
+  unordererd: TableNamesList
+} = {
+  ordered: ['user'],
+  unordererd: ['otp', 'keyPair', 'backup']
+}
 
 /**
  * Get all record hashes for all models in prisma.
@@ -47,7 +57,7 @@ export const getAllRecordHashes = async () => {
  *
  * @returns Records.
  */
-export const getAllRecords = async () => {
+export const getAllRecords = async (): Promise<Records> => {
   logDebug('Getting all records.')
   const modelNames = getAllModels()
   const records: Records = {}
@@ -61,6 +71,27 @@ export const getAllRecords = async () => {
 
   logDebug('Got', countRecords(records), 'records from the database.')
   return records
+}
+
+/**
+ * Drop all records from all models in prisma.
+ */
+export const dropAllRecords = async () => {
+  logDebug('Dropping all records.')
+
+  await Promise.all(
+    tablePriority.unordererd.map(async (modelName) => {
+      // @ts-ignore - Prisma model names are dynamic.
+      await prisma[modelName].deleteMany()
+    })
+  )
+
+  for (const modelName of clone(tablePriority.ordered).reverse()) {
+    // @ts-ignore - Prisma model names are dynamic.
+    await prisma[modelName].deleteMany()
+  }
+
+  logDebug('Dropped all records.')
 }
 
 /**
@@ -122,6 +153,27 @@ export const applyRecords = async (
       update: record
     })
   }
+}
+
+/**
+ * Apply records from multiple tables to the database.
+ *
+ * @param records Records to apply.
+ */
+export const applyAllRecords = async (records: Records) => {
+  for (const modelName of tablePriority.ordered) {
+    logDebug('Applying records to table:', modelName)
+    // @ts-ignore - Prisma model names are dynamic.
+    if (records[modelName]) await applyRecords(modelName, records[modelName])
+  }
+
+  await Promise.all(
+    tablePriority.unordererd.map(async (modelName) => {
+      logDebug('Applying records to table:', modelName)
+      // @ts-ignore - Prisma model names are dynamic.
+      if (records[modelName]) await applyRecords(modelName, records[modelName])
+    })
+  )
 }
 
 /**
