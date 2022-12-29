@@ -128,17 +128,45 @@ const invokeListeners: OverloadingInvokeListener<
   ListenerKeys
 > = async (type: string, event: string, ws: WebSocket, data: any) => {
   logDebug(`Invoking listeners and middleware for ${type}:${event}.`)
+  try {
+    await executeMiddleware(type, ws, data)
+    executeListeners(type, event, ws, data)
+  } catch (error) {
+    logDebug(`Middleware failed for ${type}:${event}.`, error)
+  }
+}
 
-  // Execute middleware.
+/**
+ * Execute middleware for a websocket event type.
+ *
+ * @param type Type of event.
+ * @param ws WebSocket connection.
+ * @throws Error if middleware fails.
+ */
+const executeMiddleware = async (type: string, ws: WebSocket, data: any) => {
   if (socketMiddleware[type]) {
     const ids = Object.keys(socketMiddleware[type])
     for (const id of ids) {
       const response = await socketMiddleware[type][id](ws, data)
-      if (!response) return
+      if (!response) throw new Error('Middleware failed.')
     }
   }
+}
 
-  // Execute listeners.
+/**
+ * Execute listeners for a websocket event.
+ *
+ * @param type Type of event.
+ * @param event Event to trigger.
+ * @param ws WebSocket connection.
+ * @param data Data to send.
+ */
+const executeListeners = (
+  type: string,
+  event: string,
+  ws: WebSocket,
+  data: any
+) => {
   if (socketListeners[type] && socketListeners[type][event]) {
     const ids = Object.keys(socketListeners[type][event])
     ids.forEach((id) => socketListeners[type][event][id](ws, data))
@@ -460,4 +488,16 @@ export const getServerByName = (name: string) => {
  */
 export const getRemoteServers = () => {
   return configuration.servers
+}
+
+/**
+ * Get a server configuration by websocket connection.
+ *
+ * @param ws WebSocket connection.
+ * @returns Server configuration or undefined.
+ */
+export const getServerByWs = (ws: WebSocket) => {
+  const name = getConnectionName(ws)
+  if (!name) return undefined
+  return getServerByName(name)
 }

@@ -26,7 +26,9 @@ import {
 } from './prisma.js'
 import {
   getRemoteServers,
+  getServerByWs,
   registerListener,
+  registerMiddlewareForType,
   sendEvent,
   sendMessage
 } from './websocket.js'
@@ -53,6 +55,7 @@ export const initSync = () => {
  * @param ws Websocket to send the message via.
  */
 export const sendRecordHashes = async (ws: WebSocket): Promise<void> => {
+  if (!(await syncEnabledForWs(ws))) return
   await waitForDb('sendRecordHashes')
   setDbWritesPausedBy(true, ws)
 
@@ -634,12 +637,59 @@ const getServers = () => {
   return servers.filter((s) => s.sync)
 }
 
-const syncEnabledMiddleware = (
-  f: (ws: WebSocket, data: any) => void,
-  ws: WebSocket,
-  data: any
-) => {
-  console.log('Checking if sync is enabled for a request...')
+/**
+ * Send a sync disabled message to a websocket.
+ *
+ * @param ws Websocket connection.
+ */
+const sendSyncDisabled = (ws: WebSocket) => {
+  sendMessage(ws, 'sync', 'syncDisabled', null)
+  logDebug('Remote server tried to sync, but sync is not enabled for it.')
+}
+
+/**
+ * Check if sync is enabled for a websocket.
+ *
+ * @param ws Websocket connection.
+ * @returns True if sync is enabled, false otherwise.
+ */
+const syncEnabledForWs = (ws: WebSocket) => {
+  const server = getServerByWs(ws)
+  if (!server) return false
+  return server.sync
+}
+
+/**
+ * Sync enabled middleware.
+ *
+ * @param ws Websocket connection.
+ * @returns True if sync is enabled, false otherwise.
+ */
+const syncEnabledMiddleware = async (ws: WebSocket) => {
+  if (!syncEnabledForWs(ws)) {
+    sendSyncDisabled(ws)
+    return false
+  }
+  return true
+}
+
+/**
+ * Handle sync disabled for a websocket.
+ *
+ * @param ws Websocket connection.
+ */
+const handleSyncDisabled = async (ws: WebSocket) => {
+  let server = getServerByWs(ws)
+  logDebug('Sync disabled for', server ? server.name : 'unknown')
+  setDbWritesPausedBy(false, ws)
+  if (server) {
+    console.warn(
+      'Disabling sync for',
+      server.name,
+      'because it is not enabled on the remote server.'
+    )
+    server.sync = false
+  }
 }
 
 /**
@@ -650,10 +700,12 @@ const setupListeners = () => {
   logDebug('Setting up sync websocket listeners...')
   registerListener('connection', 'established', sendRecordHashes)
   registerListener('connection', 'close', lostConnection)
+  registerMiddlewareForType('sync', syncEnabledMiddleware)
   registerListener('sync', 'recordHashes', recieveRecordHashes)
   registerListener('sync', 'mismatchingRecords', handleMismatchingRecords)
   registerListener('sync', 'newerRecords', applyNewerRecords)
   registerListener('sync', 'newerApplied', handleNewerRecordsResponse)
   registerListener('sync', 'updateRecord', recieveRecordUpdate)
   registerListener('sync', 'deleteRecord', recieveRecordDeletion)
+  registerListener('sync', 'syncDisabled', handleSyncDisabled)
 }
