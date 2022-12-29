@@ -24,13 +24,7 @@ import {
   getRecords,
   tablePriority
 } from './prisma.js'
-import {
-  connectToServers,
-  registerListener,
-  sendEvent,
-  sendMessage,
-  startWebsocket
-} from './websocket.js'
+import { registerListener, sendEvent, sendMessage } from './websocket.js'
 
 let configuration: SyncConfiguration
 const excludedTables: TableNamesList = ['backup']
@@ -43,43 +37,10 @@ export const initSync = () => {
   // Check if the sync service is enabled.
   configuration = serverConfig.sync
   if (!configuration.enabled) return console.log('Sync is disabled.')
-
   console.log('Sync is enabled.')
-  console.log('Server name: ' + configuration.server.name)
 
-  setupSyncWebsocket()
+  setupListeners()
 }
-
-/**
- * Get all remote servers from the configuration.
- *
- * @returns Remote servers.
- */
-export const getRemoteServers = () => configuration.servers
-
-/**
- * Get a server configuration by name.
- *
- * @param name Server name.
- * @returns Server configuration or undefined.
- */
-export const getServerByName = (name: string) => {
-  return configuration.servers.find((server) => server.name === name)
-}
-
-/**
- * Get SSL status from configuration.
- *
- * @returns SSL status.
- */
-export const getSSL = () => configuration.ssl
-
-/**
- * Get the try connect interval from configuration.
- *
- * @returns Try connect interval.
- */
-export const getTryConnectInterval = () => configuration.tryConnectInterval
 
 /**
  * Send all records as hashes to the remote server.
@@ -94,15 +55,6 @@ export const sendRecordHashes = async (ws: WebSocket): Promise<void> => {
   const recordHashes = await getAllRecordHashes(excludedTables)
   sendMessage(ws, 'sync', 'recordHashes', recordHashes)
 }
-
-/**
- * Get server information.
- *
- * @returns Server name.
- */
-export const getServerInfo = () => ({
-  name: configuration.server.name
-})
 
 /**
  * Send record updates to the remote servers.
@@ -213,20 +165,6 @@ const recieveRecordDeletion = async (
   // Send the current record to the other server.
   logDebug('Record is older, sending current record.')
   sendRecordToSyncedServers(tableName, currentRecord)
-}
-
-/**
- * Setup the websocket server and connect to all remote servers.
- */
-const setupSyncWebsocket = () => {
-  logDebug('Setting up sync websocket...')
-  setupListeners()
-  startWebsocket(configuration.server.port)
-
-  if (configuration.connectOnStart) {
-    logDebug('Connecting to remote servers...')
-    connectToServers(configuration.servers)
-  }
 }
 
 /**

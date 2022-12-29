@@ -61,6 +61,8 @@ export const websocketConfiguration = z.object({
   connectOnStart: z.boolean().default(true)
 })
 
+export type WebsocketConfiguration = z.infer<typeof websocketConfiguration>
+
 /**
  * Sync configuration schema.
  */

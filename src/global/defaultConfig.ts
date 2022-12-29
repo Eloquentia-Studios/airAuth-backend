@@ -66,7 +66,7 @@ export const defaultConfigComments = {
       'The time between attempts to connect to remote servers. UNIT: min DEFAULT: 5'
   },
   sync: {
-    _: 'Synchronization configuration.',
+    _: 'Synchronization configuration. Requires websocket to be enabled.',
     enabled:
       'Enables or disables the server syncronization service. DEFAULT: false',
 

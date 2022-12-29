@@ -9,15 +9,11 @@ import type {
   OverloadingSendMessageAll,
   OverloadingWithFunction
 } from '../types/Overload.d'
+import serverConfig from './../global/configuration.js'
 import type SocketListeners from './../types/SocketListeners.d'
-import type { RemoteServer } from './config'
-import {
-  getRemoteServers,
-  getServerByName,
-  getServerInfo,
-  getSSL,
-  getTryConnectInterval
-} from './sync.js'
+import type { RemoteServer, WebsocketConfiguration } from './config'
+
+let configuration: WebsocketConfiguration
 
 // Websocket server and connections.
 let wss: WebSocketServer | null = null
@@ -25,6 +21,23 @@ const connections = new Map<string, WebSocket>()
 
 // Event listeners for websocket connections.
 const socketListeners: SocketListeners = {}
+
+/**
+ * Initialize the websocket service.
+ */
+export const initWebsocket = () => {
+  configuration = serverConfig.websocket
+
+  if (!configuration.enabled) return console.log('Websocket disabled.')
+  console.log('Websocket enabled.')
+
+  startWebsocket(configuration.server.port)
+
+  if (configuration.connectOnStart) {
+    logDebug('Connecting to remote servers...')
+    connectToServers(configuration.servers)
+  }
+}
 
 /**
  * Register a listener for a websocket event.
@@ -119,7 +132,7 @@ export const connectToServers = (servers: RemoteServer[]) => {
     connectToServer(server)
   }
 
-  const connectInterval = getTryConnectInterval() * minutes
+  const connectInterval = configuration.tryConnectInterval * minutes
   setInterval(connectToDisconnectedServers, connectInterval)
 }
 
@@ -130,7 +143,7 @@ export const connectToServers = (servers: RemoteServer[]) => {
  */
 export const connectToServer = (server: RemoteServer, log = true) => {
   logDebug('Connecting to remote server:', server.name)
-  const protocol = getSSL() ? 'wss' : 'ws'
+  const protocol = configuration.ssl ? 'wss' : 'ws'
   const setProtocol = server.address.split('://')[0]
   if (setProtocol !== protocol && setProtocol.length <= 3)
     return console.log('Invalid protocol for server in config:', server.name)
@@ -165,8 +178,9 @@ export const connectToServer = (server: RemoteServer, log = true) => {
  * Connect to all disconnected servers.
  */
 const connectToDisconnectedServers = () => {
-  const servers = getRemoteServers()
-  const disconnected = servers.filter((server) => !connections.has(server.name))
+  const disconnected = configuration.servers.filter(
+    (server) => !connections.has(server.name)
+  )
   if (disconnected.length === 0)
     return logDebug('No disconnected servers to connect to.')
 
@@ -372,4 +386,23 @@ const getConnectionName = (ws: WebSocket) => {
   for (const [name, connection] of connections)
     if (connection === ws) return name
   return undefined
+}
+
+/**
+ * Get server information.
+ *
+ * @returns Server name.
+ */
+const getServerInfo = () => ({
+  name: configuration.server.name
+})
+
+/**
+ * Get a server configuration by name.
+ *
+ * @param name Server name.
+ * @returns Server configuration or undefined.
+ */
+export const getServerByName = (name: string) => {
+  return configuration.servers.find((server) => server.name === name)
 }
