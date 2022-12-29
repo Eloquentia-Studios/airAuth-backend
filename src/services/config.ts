@@ -77,12 +77,22 @@ export type SyncConfiguration = z.infer<typeof syncConfiguration>
 /**
  * Export server configuration interface.
  */
-export const serverConfiguration = z.object({
-  backup: backupConfiguration,
-  websocket: websocketConfiguration,
-  sync: syncConfiguration,
-  debug: z.boolean().default(false)
-})
+export const serverConfiguration = z
+  .object({
+    backup: backupConfiguration,
+    websocket: websocketConfiguration,
+    sync: syncConfiguration,
+    debug: z.boolean().default(false)
+  })
+  .refine(
+    (data) => {
+      if (data.sync.enabled && !data.websocket.enabled) {
+        return false
+      }
+      return true
+    },
+    { message: 'Sync requires websocket to be enabled.' }
+  )
 
 export type ServerConfiguration = z.infer<typeof serverConfiguration>
 export type ServerConfigurationInput = z.input<typeof serverConfiguration>
@@ -145,7 +155,12 @@ const throwErrorOnInvalidValueInConfig = (
   if (otherIssues.length > 0) {
     console.error(
       `Invalid value in configuration file at '${configPath}'.\n- `,
-      otherIssues.map((i) => `${i.path.join('.')}: ${i.message}`).join('\n- ')
+      otherIssues
+        .map((i) => {
+          if (i.path.length > 0) return `${i.path.join('.')}: ${i.message}`
+          return i.message
+        })
+        .join('\n- ')
     )
     process.exit(1)
   }
