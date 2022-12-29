@@ -9,6 +9,10 @@ import type {
   OverloadingSendMessageAll,
   OverloadingWithFunction
 } from '../types/Overload.d'
+import {
+  SocketMiddleware,
+  SocketMiddlewareFunction
+} from '../types/SocketMiddleware.js'
 import serverConfig from './../global/configuration.js'
 import type SocketListeners from './../types/SocketListeners.d'
 import type { RemoteServer, WebsocketConfiguration } from './config'
@@ -21,6 +25,7 @@ const connections = new Map<string, WebSocket>()
 
 // Event listeners for websocket connections.
 const socketListeners: SocketListeners = {}
+const socketMiddleware: SocketMiddleware = {}
 
 /**
  * Initialize the websocket service.
@@ -80,6 +85,36 @@ export const removeListener = (id: string) => {
 }
 
 /**
+ * Register a middleware for a websocket event type.
+ *
+ * @param type Type of event.
+ * @param middleware Middleware function.
+ */
+export const registerMiddlewareForType = (
+  type: ListenerKeys,
+  middleware: SocketMiddlewareFunction
+) => {
+  const id = uuid()
+  if (!socketMiddleware[type]) socketMiddleware[type] = {}
+  // @ts-ignore - Above line makes sure this is not undefined.
+  socketMiddleware[type][id] = middleware
+  logDebug(`Registered middleware for ${type}.`)
+  return id
+}
+
+/**
+ * Remove a middleware from the middleware object.
+ */
+export const removeMiddleware = (id: string) => {
+  for (const type in socketMiddleware) {
+    if (socketMiddleware[type][id]) {
+      delete socketMiddleware[type][id]
+      logDebug(`Removed middleware ${id} for ${type}.`)
+    }
+  }
+}
+
+/**
  * Invoke a listener event for websockets.
  *
  * @param listeners Listeners object to use.
@@ -91,8 +126,19 @@ export const removeListener = (id: string) => {
 const invokeListeners: OverloadingInvokeListener<
   ListenerTypes,
   ListenerKeys
-> = (type: string, event: string, ws: WebSocket, data: any) => {
-  logDebug(`Invoking listeners for ${type}:${event} with data:`, data)
+> = async (type: string, event: string, ws: WebSocket, data: any) => {
+  logDebug(`Invoking listeners and middleware for ${type}:${event}.`)
+
+  // Execute middleware.
+  if (socketMiddleware[type]) {
+    const ids = Object.keys(socketMiddleware[type])
+    for (const id of ids) {
+      const response = await socketMiddleware[type][id](ws, data)
+      if (!response) return
+    }
+  }
+
+  // Execute listeners.
   if (socketListeners[type] && socketListeners[type][event]) {
     const ids = Object.keys(socketListeners[type][event])
     ids.forEach((id) => socketListeners[type][event][id](ws, data))
@@ -405,4 +451,13 @@ const getServerInfo = () => ({
  */
 export const getServerByName = (name: string) => {
   return configuration.servers.find((server) => server.name === name)
+}
+
+/**
+ * Get all remote servers.
+ *
+ * @returns Array of servers.
+ */
+export const getRemoteServers = () => {
+  return configuration.servers
 }

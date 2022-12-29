@@ -24,7 +24,12 @@ import {
   getRecords,
   tablePriority
 } from './prisma.js'
-import { registerListener, sendEvent, sendMessage } from './websocket.js'
+import {
+  getRemoteServers,
+  registerListener,
+  sendEvent,
+  sendMessage
+} from './websocket.js'
 
 let configuration: SyncConfiguration
 const excludedTables: TableNamesList = ['backup']
@@ -617,6 +622,24 @@ const lostConnection = (ws: WebSocket, name: string | undefined) => {
     name ?? 'unknown'
   )
   setDbWritesPausedBy(false, ws)
+}
+
+/**
+ * Get all servers that are synced.
+ *
+ * @returns List of servers.
+ */
+const getServers = () => {
+  const servers = getRemoteServers()
+  return servers.filter((s) => s.sync)
+}
+
+const syncEnabledMiddleware = (
+  f: (ws: WebSocket, data: any) => void,
+  ws: WebSocket,
+  data: any
+) => {
+  console.log('Checking if sync is enabled for a request...')
 }
 
 /**
