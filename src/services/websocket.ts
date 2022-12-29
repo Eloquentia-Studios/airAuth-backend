@@ -9,15 +9,15 @@ import type {
   OverloadingSendMessageAll,
   OverloadingWithFunction
 } from '../types/Overload.d'
-import type SocketListeners from './../types/SocketListeners.d'
-import type { RemoteServer } from './config'
 import {
-  getRemoteServers,
-  getServerByName,
-  getServerInfo,
-  getSSL,
-  getTryConnectInterval
-} from './sync.js'
+  SocketMiddleware,
+  SocketMiddlewareFunction
+} from '../types/SocketMiddleware.js'
+import serverConfig from './../global/configuration.js'
+import type SocketListeners from './../types/SocketListeners.d'
+import type { RemoteServer, WebsocketConfiguration } from './config'
+
+let configuration: WebsocketConfiguration
 
 // Websocket server and connections.
 let wss: WebSocketServer | null = null
@@ -25,6 +25,24 @@ const connections = new Map<string, WebSocket>()
 
 // Event listeners for websocket connections.
 const socketListeners: SocketListeners = {}
+const socketMiddleware: SocketMiddleware = {}
+
+/**
+ * Initialize the websocket service.
+ */
+export const initWebsocket = () => {
+  configuration = serverConfig.websocket
+
+  if (!configuration.enabled) return console.log('Websocket disabled.')
+  console.log('Websocket enabled.')
+
+  startWebsocket(configuration.server.port)
+
+  if (configuration.connectOnStart) {
+    logDebug('Connecting to remote servers...')
+    connectToServers(configuration.servers)
+  }
+}
 
 /**
  * Register a listener for a websocket event.
@@ -67,6 +85,36 @@ export const removeListener = (id: string) => {
 }
 
 /**
+ * Register a middleware for a websocket event type.
+ *
+ * @param type Type of event.
+ * @param middleware Middleware function.
+ */
+export const registerMiddlewareForType = (
+  type: ListenerKeys,
+  middleware: SocketMiddlewareFunction
+) => {
+  const id = uuid()
+  if (!socketMiddleware[type]) socketMiddleware[type] = {}
+  // @ts-ignore - Above line makes sure this is not undefined.
+  socketMiddleware[type][id] = middleware
+  logDebug(`Registered middleware for ${type}.`)
+  return id
+}
+
+/**
+ * Remove a middleware from the middleware object.
+ */
+export const removeMiddleware = (id: string) => {
+  for (const type in socketMiddleware) {
+    if (socketMiddleware[type][id]) {
+      delete socketMiddleware[type][id]
+      logDebug(`Removed middleware ${id} for ${type}.`)
+    }
+  }
+}
+
+/**
  * Invoke a listener event for websockets.
  *
  * @param listeners Listeners object to use.
@@ -78,8 +126,47 @@ export const removeListener = (id: string) => {
 const invokeListeners: OverloadingInvokeListener<
   ListenerTypes,
   ListenerKeys
-> = (type: string, event: string, ws: WebSocket, data: any) => {
-  logDebug(`Invoking listeners for ${type}:${event} with data:`, data)
+> = async (type: string, event: string, ws: WebSocket, data: any) => {
+  logDebug(`Invoking listeners and middleware for ${type}:${event}.`)
+  try {
+    await executeMiddleware(type, ws, data)
+    executeListeners(type, event, ws, data)
+  } catch (error) {
+    logDebug(`Middleware failed for ${type}:${event}.`, error)
+  }
+}
+
+/**
+ * Execute middleware for a websocket event type.
+ *
+ * @param type Type of event.
+ * @param ws WebSocket connection.
+ * @throws Error if middleware fails.
+ */
+const executeMiddleware = async (type: string, ws: WebSocket, data: any) => {
+  if (socketMiddleware[type]) {
+    const ids = Object.keys(socketMiddleware[type])
+    for (const id of ids) {
+      const response = await socketMiddleware[type][id](ws, data)
+      if (!response) throw new Error('Middleware failed.')
+    }
+  }
+}
+
+/**
+ * Execute listeners for a websocket event.
+ *
+ * @param type Type of event.
+ * @param event Event to trigger.
+ * @param ws WebSocket connection.
+ * @param data Data to send.
+ */
+const executeListeners = (
+  type: string,
+  event: string,
+  ws: WebSocket,
+  data: any
+) => {
   if (socketListeners[type] && socketListeners[type][event]) {
     const ids = Object.keys(socketListeners[type][event])
     ids.forEach((id) => socketListeners[type][event][id](ws, data))
@@ -119,7 +206,7 @@ export const connectToServers = (servers: RemoteServer[]) => {
     connectToServer(server)
   }
 
-  const connectInterval = getTryConnectInterval() * minutes
+  const connectInterval = configuration.tryConnectInterval * minutes
   setInterval(connectToDisconnectedServers, connectInterval)
 }
 
@@ -130,7 +217,7 @@ export const connectToServers = (servers: RemoteServer[]) => {
  */
 export const connectToServer = (server: RemoteServer, log = true) => {
   logDebug('Connecting to remote server:', server.name)
-  const protocol = getSSL() ? 'wss' : 'ws'
+  const protocol = configuration.ssl ? 'wss' : 'ws'
   const setProtocol = server.address.split('://')[0]
   if (setProtocol !== protocol && setProtocol.length <= 3)
     return console.log('Invalid protocol for server in config:', server.name)
@@ -165,8 +252,9 @@ export const connectToServer = (server: RemoteServer, log = true) => {
  * Connect to all disconnected servers.
  */
 const connectToDisconnectedServers = () => {
-  const servers = getRemoteServers()
-  const disconnected = servers.filter((server) => !connections.has(server.name))
+  const disconnected = configuration.servers.filter(
+    (server) => !connections.has(server.name)
+  )
   if (disconnected.length === 0)
     return logDebug('No disconnected servers to connect to.')
 
@@ -372,4 +460,44 @@ const getConnectionName = (ws: WebSocket) => {
   for (const [name, connection] of connections)
     if (connection === ws) return name
   return undefined
+}
+
+/**
+ * Get server information.
+ *
+ * @returns Server name.
+ */
+const getServerInfo = () => ({
+  name: configuration.server.name
+})
+
+/**
+ * Get a server configuration by name.
+ *
+ * @param name Server name.
+ * @returns Server configuration or undefined.
+ */
+export const getServerByName = (name: string) => {
+  return configuration.servers.find((server) => server.name === name)
+}
+
+/**
+ * Get all remote servers.
+ *
+ * @returns Array of servers.
+ */
+export const getRemoteServers = () => {
+  return configuration.servers
+}
+
+/**
+ * Get a server configuration by websocket connection.
+ *
+ * @param ws WebSocket connection.
+ * @returns Server configuration or undefined.
+ */
+export const getServerByWs = (ws: WebSocket) => {
+  const name = getConnectionName(ws)
+  if (!name) return undefined
+  return getServerByName(name)
 }

@@ -25,11 +25,12 @@ import {
   tablePriority
 } from './prisma.js'
 import {
-  connectToServers,
+  getRemoteServers,
+  getServerByWs,
   registerListener,
+  registerMiddlewareForType,
   sendEvent,
-  sendMessage,
-  startWebsocket
+  sendMessage
 } from './websocket.js'
 
 let configuration: SyncConfiguration
@@ -43,43 +44,10 @@ export const initSync = () => {
   // Check if the sync service is enabled.
   configuration = serverConfig.sync
   if (!configuration.enabled) return console.log('Sync is disabled.')
-
   console.log('Sync is enabled.')
-  console.log('Server name: ' + configuration.server.name)
 
-  setupSyncWebsocket()
+  setupListeners()
 }
-
-/**
- * Get all remote servers from the configuration.
- *
- * @returns Remote servers.
- */
-export const getRemoteServers = () => configuration.servers
-
-/**
- * Get a server configuration by name.
- *
- * @param name Server name.
- * @returns Server configuration or undefined.
- */
-export const getServerByName = (name: string) => {
-  return configuration.servers.find((server) => server.name === name)
-}
-
-/**
- * Get SSL status from configuration.
- *
- * @returns SSL status.
- */
-export const getSSL = () => configuration.ssl
-
-/**
- * Get the try connect interval from configuration.
- *
- * @returns Try connect interval.
- */
-export const getTryConnectInterval = () => configuration.tryConnectInterval
 
 /**
  * Send all records as hashes to the remote server.
@@ -87,6 +55,7 @@ export const getTryConnectInterval = () => configuration.tryConnectInterval
  * @param ws Websocket to send the message via.
  */
 export const sendRecordHashes = async (ws: WebSocket): Promise<void> => {
+  if (!(await syncEnabledForWs(ws))) return
   await waitForDb('sendRecordHashes')
   setDbWritesPausedBy(true, ws)
 
@@ -94,15 +63,6 @@ export const sendRecordHashes = async (ws: WebSocket): Promise<void> => {
   const recordHashes = await getAllRecordHashes(excludedTables)
   sendMessage(ws, 'sync', 'recordHashes', recordHashes)
 }
-
-/**
- * Get server information.
- *
- * @returns Server name.
- */
-export const getServerInfo = () => ({
-  name: configuration.server.name
-})
 
 /**
  * Send record updates to the remote servers.
@@ -213,20 +173,6 @@ const recieveRecordDeletion = async (
   // Send the current record to the other server.
   logDebug('Record is older, sending current record.')
   sendRecordToSyncedServers(tableName, currentRecord)
-}
-
-/**
- * Setup the websocket server and connect to all remote servers.
- */
-const setupSyncWebsocket = () => {
-  logDebug('Setting up sync websocket...')
-  setupListeners()
-  startWebsocket(configuration.server.port)
-
-  if (configuration.connectOnStart) {
-    logDebug('Connecting to remote servers...')
-    connectToServers(configuration.servers)
-  }
 }
 
 /**
@@ -682,6 +628,71 @@ const lostConnection = (ws: WebSocket, name: string | undefined) => {
 }
 
 /**
+ * Get all servers that are synced.
+ *
+ * @returns List of servers.
+ */
+const getServers = () => {
+  const servers = getRemoteServers()
+  return servers.filter((s) => s.sync)
+}
+
+/**
+ * Send a sync disabled message to a websocket.
+ *
+ * @param ws Websocket connection.
+ */
+const sendSyncDisabled = (ws: WebSocket) => {
+  sendMessage(ws, 'sync', 'syncDisabled', null)
+  logDebug('Remote server tried to sync, but sync is not enabled for it.')
+}
+
+/**
+ * Check if sync is enabled for a websocket.
+ *
+ * @param ws Websocket connection.
+ * @returns True if sync is enabled, false otherwise.
+ */
+const syncEnabledForWs = (ws: WebSocket) => {
+  const server = getServerByWs(ws)
+  if (!server) return false
+  return server.sync
+}
+
+/**
+ * Sync enabled middleware.
+ *
+ * @param ws Websocket connection.
+ * @returns True if sync is enabled, false otherwise.
+ */
+const syncEnabledMiddleware = async (ws: WebSocket) => {
+  if (!syncEnabledForWs(ws)) {
+    sendSyncDisabled(ws)
+    return false
+  }
+  return true
+}
+
+/**
+ * Handle sync disabled for a websocket.
+ *
+ * @param ws Websocket connection.
+ */
+const handleSyncDisabled = async (ws: WebSocket) => {
+  let server = getServerByWs(ws)
+  logDebug('Sync disabled for', server ? server.name : 'unknown')
+  setDbWritesPausedBy(false, ws)
+  if (server) {
+    console.warn(
+      'Disabling sync for',
+      server.name,
+      'because it is not enabled on the remote server.'
+    )
+    server.sync = false
+  }
+}
+
+/**
  * Setup sync websocket listeners.
  */
 const setupListeners = () => {
@@ -689,10 +700,12 @@ const setupListeners = () => {
   logDebug('Setting up sync websocket listeners...')
   registerListener('connection', 'established', sendRecordHashes)
   registerListener('connection', 'close', lostConnection)
+  registerMiddlewareForType('sync', syncEnabledMiddleware)
   registerListener('sync', 'recordHashes', recieveRecordHashes)
   registerListener('sync', 'mismatchingRecords', handleMismatchingRecords)
   registerListener('sync', 'newerRecords', applyNewerRecords)
   registerListener('sync', 'newerApplied', handleNewerRecordsResponse)
   registerListener('sync', 'updateRecord', recieveRecordUpdate)
   registerListener('sync', 'deleteRecord', recieveRecordDeletion)
+  registerListener('sync', 'syncDisabled', handleSyncDisabled)
 }

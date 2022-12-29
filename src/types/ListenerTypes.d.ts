@@ -8,6 +8,7 @@ export interface ListenerTypes {
     | 'newerApplied'
     | 'updateRecord'
     | 'deleteRecord'
+    | 'syncDisabled'
 }
 
 export type ListenerKeys = keyof ListenerTypes

@@ -8,38 +8,8 @@ import {
   defaultConfig,
   defaultConfigComments
 } from '../global/defaultConfig.js'
+import clone from '../lib/clone.js'
 import { isDirectory, isValidPath } from './validate.js'
-
-/**
- * Remote server configuration schema.
- */
-export const remoteServer = z.object({
-  name: z.string().min(1).max(100),
-  address: z.string().min(1).max(100)
-})
-
-// Export the remote server type.
-export type RemoteServer = z.infer<typeof remoteServer>
-
-// TODO: Add custom error messages.
-/**
- * Sync configuration schema.
- */
-export const syncConfiguration = z.object({
-  enabled: z.boolean(),
-  server: z.object({
-    name: z.string().min(1).max(100),
-    port: z.number().int().min(1).max(65535)
-  }),
-  ssl: z.boolean(),
-  servers: z.array(remoteServer).max(1),
-  fullSyncInterval: z.number().int().min(1).max(1440),
-  tryConnectInterval: z.number().int().min(1).max(1440),
-  secret: z.string().min(15).max(512),
-  connectOnStart: z.boolean().default(true)
-})
-
-export type SyncConfiguration = z.infer<typeof syncConfiguration>
 
 /**
  * Backup configuration schema.
@@ -65,10 +35,51 @@ export const backupConfiguration = z
 export type BackupConfiguration = z.infer<typeof backupConfiguration>
 
 /**
+ * Remote server configuration schema.
+ */
+export const remoteServer = z.object({
+  name: z.string().min(1).max(100),
+  address: z.string().min(1).max(100),
+  sync: z.boolean().default(false)
+})
+
+// Export the remote server type.
+export type RemoteServer = z.infer<typeof remoteServer>
+
+/**
+ * Websocket configuration schema.
+ */
+export const websocketConfiguration = z.object({
+  enabled: z.boolean(),
+  server: z.object({
+    name: z.string().min(1).max(100),
+    port: z.number().int().min(1).max(65535)
+  }),
+  ssl: z.boolean(),
+  servers: z.array(remoteServer).max(1),
+  tryConnectInterval: z.number().int().min(1).max(1440),
+  connectOnStart: z.boolean().default(true)
+})
+
+export type WebsocketConfiguration = z.infer<typeof websocketConfiguration>
+
+/**
+ * Sync configuration schema.
+ */
+export const syncConfiguration = z.object({
+  enabled: z.boolean(),
+  fullSyncInterval: z.number().int().min(1).max(1440),
+  secret: z.string().min(15).max(512)
+})
+
+export type SyncConfiguration = z.infer<typeof syncConfiguration>
+
+/**
  * Export server configuration interface.
  */
 export const serverConfiguration = z.object({
   backup: backupConfiguration,
+  websocket: websocketConfiguration,
   sync: syncConfiguration,
   debug: z.boolean().default(false)
 })
@@ -85,9 +96,7 @@ export const writeDefaultConfig = (path: string) => {
   // Check if the file already exists.
   if (existsSync(path)) return
 
-  // Write the file.
-  const json = stringifyJsonWithComments(defaultConfig, defaultConfigComments)
-  writeFileSync(path, json)
+  writeConfigWithComments(path, defaultConfig)
   console.log('Default configuration file written to:', path)
 }
 
@@ -102,16 +111,62 @@ export const readConfig = () => {
   if (!existsSync(configPath))
     throw new Error(`Configuration file not found at '${configPath}'`)
 
-  // Read the file.
   const config = parseJsonWithComments(readFileSync(configPath, 'utf-8'))
-
   const validatedConfig = serverConfiguration.safeParse(config)
 
   if (validatedConfig.success) {
     return validatedConfig.data
   } else {
-    throw new Error(
-      'Configuration file is invalid: ' + validatedConfig.error.message
-    )
+    tryToRepairConfig(validatedConfig.error.issues, config, configPath)
   }
+}
+
+export const tryToRepairConfig = (
+  issues: z.ZodIssue[],
+  config: object,
+  configPath: string
+) => {
+  throwErrorOnInvalidValueInConfig(issues, configPath)
+  const repairedConfing = repairConfig(config, clone(defaultConfig))
+  writeConfigWithComments(configPath, repairedConfing)
+  console.warn(
+    `Configuration file at '${configPath}' has been repaired, please check it!`
+  )
+  process.exit(1)
+}
+
+const throwErrorOnInvalidValueInConfig = (
+  issues: z.ZodIssue[],
+  configPath: string
+) => {
+  const requiredIssues = issues.filter((i) => i.message === 'Required')
+  const otherIssues = issues.filter((i) => i.message !== 'Required')
+
+  if (otherIssues.length > 0) {
+    console.error(
+      `Invalid value in configuration file at '${configPath}'.\n- `,
+      otherIssues.map((i) => `${i.path.join('.')}: ${i.message}`).join('\n- ')
+    )
+    process.exit(1)
+  }
+}
+
+const repairConfig = (config: any, newConfig: any) => {
+  if (!newConfig) return config
+  const keys = Object.keys(newConfig)
+  keys.push(...Object.keys(config).filter((k) => !keys.includes(k)))
+
+  for (const key of keys) {
+    if (config[key]) {
+      if (typeof config[key] === 'object')
+        newConfig[key] = repairConfig(config[key], newConfig[key])
+      else newConfig[key] = config[key]
+    }
+  }
+  return newConfig
+}
+
+const writeConfigWithComments = (configPath: string, config: object) => {
+  const json = stringifyJsonWithComments(config, defaultConfigComments)
+  writeFileSync(configPath, json)
 }
