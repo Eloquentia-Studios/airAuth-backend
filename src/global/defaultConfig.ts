@@ -53,9 +53,9 @@ export const defaultConfigComments = {
       port: 'Port to use for websocket server for connection between servers. DEFAULT: 7070'
     },
     servers: {
-      _: 'List of remote servers to connect to. Currently only supports one server.',
+      _: 'List of remote servers to connect to.',
       0: {
-        name: 'Name of the server to synchronize with. DEFAULT: SECOND-SERVER',
+        name: 'Name of the server. DEFAULT: SECOND-SERVER',
         address:
           'Websocket connection address. DEFAULT: http://server.two:7070',
         sync: 'Enables or disables synchronization with this server. If field not defined, will assume default value. DEFAULT: false'

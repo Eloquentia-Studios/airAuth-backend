@@ -56,7 +56,7 @@ export const websocketConfiguration = z.object({
     port: z.number().int().min(1).max(65535)
   }),
   ssl: z.boolean(),
-  servers: z.array(remoteServer).max(1),
+  servers: z.array(remoteServer).max(2),
   tryConnectInterval: z.number().int().min(1).max(1440),
   connectOnStart: z.boolean().default(true)
 })
