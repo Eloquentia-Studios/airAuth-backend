@@ -1,5 +1,6 @@
 import { v4 as uuid } from 'uuid'
 import WebSocket, { WebSocketServer } from 'ws'
+import { minutes } from '../global/time.js'
 import logDebug from '../lib/logDebug.js'
 import type { ListenerKeys, ListenerTypes } from '../types/ListenerTypes.d'
 import type {
@@ -10,7 +11,13 @@ import type {
 } from '../types/Overload.d'
 import type SocketListeners from './../types/SocketListeners.d'
 import type { RemoteServer } from './config'
-import { getServerByName, getServerInfo, getSSL } from './sync.js'
+import {
+  getRemoteServers,
+  getServerByName,
+  getServerInfo,
+  getSSL,
+  getTryConnectInterval
+} from './sync.js'
 
 // Websocket server and connections.
 let wss: WebSocketServer | null = null
@@ -111,6 +118,9 @@ export const connectToServers = (servers: RemoteServer[]) => {
   for (const server of servers) {
     connectToServer(server)
   }
+
+  const connectInterval = getTryConnectInterval() * minutes
+  setInterval(connectToDisconnectedServers, connectInterval)
 }
 
 /**
@@ -149,6 +159,21 @@ export const connectToServer = (server: RemoteServer, log = true) => {
   }
 
   return ws
+}
+
+/**
+ * Connect to all disconnected servers.
+ */
+const connectToDisconnectedServers = () => {
+  const servers = getRemoteServers()
+  const disconnected = servers.filter((server) => !connections.has(server.name))
+  if (disconnected.length === 0)
+    return logDebug('No disconnected servers to connect to.')
+
+  console.log('Trying to connect to disconnected servers...')
+  for (const server of disconnected) {
+    connectToServer(server, false)
+  }
 }
 
 /**

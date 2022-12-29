@@ -51,6 +51,13 @@ export const initSync = () => {
 }
 
 /**
+ * Get all remote servers from the configuration.
+ *
+ * @returns Remote servers.
+ */
+export const getRemoteServers = () => configuration.servers
+
+/**
  * Get a server configuration by name.
  *
  * @param name Server name.
@@ -66,6 +73,13 @@ export const getServerByName = (name: string) => {
  * @returns SSL status.
  */
 export const getSSL = () => configuration.ssl
+
+/**
+ * Get the try connect interval from configuration.
+ *
+ * @returns Try connect interval.
+ */
+export const getTryConnectInterval = () => configuration.tryConnectInterval
 
 /**
  * Send all records as hashes to the remote server.

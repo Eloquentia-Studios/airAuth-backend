@@ -22,6 +22,7 @@ export const defaultConfig: ServerConfigurationInput = {
     ],
     ssl: false,
     fullSyncInterval: 30,
+    tryConnectInterval: 5,
     secret: 'THIS-SHOULD-BE-RANDOMLY-GENERATED'
   },
   debug: false
@@ -57,6 +58,8 @@ export const defaultConfigComments = {
     ssl: 'This indicates if websocket connections should use SSL by default. This is overridden if either `ws://` or `wss://` is used in the server address. DEFAULT: false',
     fullSyncInterval:
       'The time between full database syncs to run during runtime. Zero to disable. UNIT: min DEFAULT: 30',
+    tryConnectInterval:
+      'The time between attempts to connect to remote servers. UNIT: min DEFAULT: 5',
     secret:
       'A secret which should be shared between all servers. This should be generated using a tool such as: https://www.random.org/strings/?num=5&len=20&digits=on&upperalpha=on&loweralpha=on&format=plain'
   },
