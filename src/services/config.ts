@@ -34,7 +34,9 @@ export const syncConfiguration = z.object({
   ssl: z.boolean(),
   servers: z.array(remoteServer).max(1),
   fullSyncInterval: z.number().int().min(1).max(1440),
-  secret: z.string().min(15).max(512)
+  tryConnectInterval: z.number().int().min(1).max(1440),
+  secret: z.string().min(15).max(512),
+  connectOnStart: z.boolean().default(true)
 })
 
 export type SyncConfiguration = z.infer<typeof syncConfiguration>
@@ -72,6 +74,7 @@ export const serverConfiguration = z.object({
 })
 
 export type ServerConfiguration = z.infer<typeof serverConfiguration>
+export type ServerConfigurationInput = z.input<typeof serverConfiguration>
 
 /**
  * Write the default configuration file.

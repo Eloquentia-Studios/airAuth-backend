@@ -51,6 +51,37 @@ export const initSync = () => {
 }
 
 /**
+ * Get all remote servers from the configuration.
+ *
+ * @returns Remote servers.
+ */
+export const getRemoteServers = () => configuration.servers
+
+/**
+ * Get a server configuration by name.
+ *
+ * @param name Server name.
+ * @returns Server configuration or undefined.
+ */
+export const getServerByName = (name: string) => {
+  return configuration.servers.find((server) => server.name === name)
+}
+
+/**
+ * Get SSL status from configuration.
+ *
+ * @returns SSL status.
+ */
+export const getSSL = () => configuration.ssl
+
+/**
+ * Get the try connect interval from configuration.
+ *
+ * @returns Try connect interval.
+ */
+export const getTryConnectInterval = () => configuration.tryConnectInterval
+
+/**
  * Send all records as hashes to the remote server.
  *
  * @param ws Websocket to send the message via.
@@ -192,8 +223,10 @@ const setupSyncWebsocket = () => {
   setupListeners()
   startWebsocket(configuration.server.port)
 
-  logDebug('Connecting to remote servers...')
-  connectToServers(configuration.servers, configuration.ssl)
+  if (configuration.connectOnStart) {
+    logDebug('Connecting to remote servers...')
+    connectToServers(configuration.servers)
+  }
 }
 
 /**
