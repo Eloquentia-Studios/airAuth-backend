@@ -105,7 +105,7 @@ export const writeDefaultConfig = (path: string) => {
  *
  * @returns Configuration object.
  */
-export const readConfig = () => {
+export const readConfig = (): ServerConfiguration => {
   // Check if the file exists.
   const configPath = process.env.CONFIG_PATH || './config/config.json'
   if (!existsSync(configPath))
@@ -117,7 +117,7 @@ export const readConfig = () => {
   if (validatedConfig.success) {
     return validatedConfig.data
   } else {
-    tryToRepairConfig(validatedConfig.error.issues, config, configPath)
+    return tryToRepairConfig(validatedConfig.error.issues, config, configPath)
   }
 }
 
@@ -127,12 +127,12 @@ export const tryToRepairConfig = (
   configPath: string
 ) => {
   throwErrorOnInvalidValueInConfig(issues, configPath)
-  const repairedConfing = repairConfig(config, clone(defaultConfig))
-  writeConfigWithComments(configPath, repairedConfing)
+  const repairedConfig = repairConfig(config, clone(defaultConfig))
+  writeConfigWithComments(configPath, repairedConfig)
   console.warn(
     `Configuration file at '${configPath}' has been repaired, please check it!`
   )
-  process.exit(1)
+  return serverConfiguration.parse(repairedConfig)
 }
 
 const throwErrorOnInvalidValueInConfig = (
