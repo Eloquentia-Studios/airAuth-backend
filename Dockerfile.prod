@@ -23,6 +23,7 @@ COPY --from=ts-compiler /app/dist ./dist
 COPY --from=ts-compiler /app/prisma ./prisma
 
 RUN npm i --only=production
+RUN apt-get update && apt-get install -y openssl libssl-dev
 RUN npx prisma generate
 
 EXPOSE 8080

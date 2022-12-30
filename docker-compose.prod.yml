@@ -33,6 +33,7 @@ services:
       - CIPHER_IV=#hzCY@5&S#JqvDgS1
     volumes:
       - ./config:/app/config
+      - ./backups:/app/backups
     networks:
       - airAuth
     depends_on:
