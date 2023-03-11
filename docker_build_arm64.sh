@@ -1,0 +1,1 @@
+docker buildx build --platform=linux/amd64,linux/arm64 --push -t eloquentiastudios/airauth-backend:1.3.1 -f .\Dockerfile.prod .
