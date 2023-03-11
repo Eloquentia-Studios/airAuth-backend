@@ -47,52 +47,12 @@ export const remoteServer = z.object({
 export type RemoteServer = z.infer<typeof remoteServer>
 
 /**
- * Websocket configuration schema.
- */
-export const websocketConfiguration = z.object({
-  enabled: z.boolean(),
-  server: z.object({
-    name: z.string().min(1).max(100),
-    port: z.number().int().min(1).max(65535)
-  }),
-  ssl: z.boolean(),
-  servers: z.array(remoteServer).max(2),
-  tryConnectInterval: z.number().int().min(1).max(1440),
-  connectOnStart: z.boolean().default(true)
-})
-
-export type WebsocketConfiguration = z.infer<typeof websocketConfiguration>
-
-/**
- * Sync configuration schema.
- */
-export const syncConfiguration = z.object({
-  enabled: z.boolean(),
-  fullSyncInterval: z.number().int().min(1).max(1440),
-  secret: z.string().min(15).max(512)
-})
-
-export type SyncConfiguration = z.infer<typeof syncConfiguration>
-
-/**
  * Export server configuration interface.
  */
-export const serverConfiguration = z
-  .object({
-    backup: backupConfiguration,
-    websocket: websocketConfiguration,
-    sync: syncConfiguration,
-    debug: z.boolean().default(false)
-  })
-  .refine(
-    (data) => {
-      if (data.sync.enabled && !data.websocket.enabled) {
-        return false
-      }
-      return true
-    },
-    { message: 'Sync requires websocket to be enabled.' }
-  )
+export const serverConfiguration = z.object({
+  backup: backupConfiguration,
+  debug: z.boolean().default(false)
+})
 
 export type ServerConfiguration = z.infer<typeof serverConfiguration>
 export type ServerConfigurationInput = z.input<typeof serverConfiguration>
