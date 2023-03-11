@@ -7,7 +7,6 @@ import type { RecordHash } from '../types/RecordHash.d'
 import type UserUpdates from '../types/UserUpdates.d'
 import { generateEncryptedKeyPair } from './encryption.js'
 import prisma from './prisma.js'
-import { sendRecordToSyncedServers as sendRecordUpdateToSyncedServers } from './sync.js'
 
 /**
  * Create a new user.
@@ -58,9 +57,6 @@ export const createUser = async (
       keyPair: true
     }
   })) as User & { keyPair: KeyPair }
-
-  // Send to remote servers.
-  await sendRecordUpdateToSyncedServers('user', user)
 
   return user
 }
@@ -162,9 +158,6 @@ export const updateUser = async (
       hash: hashObject(newUserData)
     }
   })
-
-  // Send to remote servers.
-  sendRecordUpdateToSyncedServers('user', user)
 
   return user
 }

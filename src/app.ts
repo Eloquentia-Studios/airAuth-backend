@@ -3,8 +3,6 @@ import logDebug from './lib/logDebug.js'
 import { initBackup, restoreBackup } from './services/backup.js'
 import { createServer } from './services/express.js'
 import { loadKeys } from './services/jwt.js'
-import { initSync } from './services/sync.js'
-import { initWebsocket } from './services/websocket.js'
 
 logDebug('Starting server...')
 
@@ -22,5 +20,3 @@ app.listen(port, () => {
 })
 
 initBackup()
-initWebsocket()
-initSync()
